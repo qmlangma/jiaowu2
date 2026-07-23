@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Check,
@@ -8,6 +8,10 @@ import {
   FileText,
   X,
 } from "lucide-react";
+
+const RefundAnalysisPage = lazy(() =>
+  import("./RefundAnalysisPage").then((module) => ({ default: module.RefundAnalysisPage })),
+);
 
 type LessonState = "completed" | "selectable" | "refunded";
 type LessonDelivery = "offline" | "online";
@@ -135,6 +139,7 @@ function LessonSelectionEmptyState({
 }
 
 export default function App() {
+  const [activePage, setActivePage] = useState<"home" | "analysis">("home");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [detailView, setDetailView] = useState<DetailView>(null);
   const [showAllLessonRows, setShowAllLessonRows] = useState(false);
@@ -480,10 +485,41 @@ export default function App() {
     setDrawerOpen(true);
   };
 
+  if (activePage === "analysis") {
+    return (
+      <Suspense
+        fallback={
+          <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#f8fbff_0%,_#eef4ff_44%,_#e8eef9_100%)] text-[#667085]">
+            正在打开数据分析页...
+          </main>
+        }
+      >
+        <RefundAnalysisPage onBack={() => setActivePage("home")} />
+      </Suspense>
+    );
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_#ffffff_0%,_#f5f7fb_42%,_#eef3fb_100%)] font-['Noto_Sans_SC'] text-[#182230]">
       <div className="mx-auto w-full max-w-[1200px] px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         <div className="space-y-10">
+          <div className="sticky top-4 z-20 rounded-[28px] border border-[#e5e9f0] bg-[rgba(255,255,255,0.88)] px-4 py-4 shadow-[0_14px_30px_rgba(15,23,42,0.08)] backdrop-blur-md sm:px-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#7b8190]">Refund Demo</p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-[#111827]">退款演示首页</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#667085]">
+                  这里展示退课和特殊退费的业务流程，右上角可以直接切换到退款明细数据分析页。
+                </p>
+              </div>
+              <button
+                onClick={() => setActivePage("analysis")}
+                className="inline-flex items-center justify-center rounded-full bg-[#173f66] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(23,63,102,0.18)] transition hover:-translate-y-0.5 hover:bg-[#103552]"
+              >
+                查看数据分析
+              </button>
+            </div>
+          </div>
           <section className="overflow-hidden rounded-[32px] border border-[#e5e9f0] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
             <div className="border-b border-[#edf0f4] px-6 py-5 sm:px-8">
               <div className="flex items-center gap-3">
@@ -756,7 +792,7 @@ export default function App() {
               </div></section>
             </div>
 
-            <div className="flex justify-end border-t border-[#e7ebf2] bg-white px-6 py-4 sm:px-8"><div className="flex gap-3"><button onClick={closeDrawer} className="rounded-lg border border-[#d0d5dd] px-5 py-2.5 text-sm font-semibold text-[#475467] transition hover:bg-[#f9fafb]">取消</button><button onClick={() => setConfirmed(true)} disabled={isConfirmDisabled} className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-[0_6px_12px_rgba(23,63,102,0.16)] transition ${isConfirmDisabled ? "cursor-not-allowed bg-[#98a2b3]" : "bg-[#173f66] hover:bg-[#103552]"}`}>{confirmButtonText}</button></div></div>
+            <div className="flex justify-end border-t border-[#e7ebf2] bg-white px-6 py-4 sm:px-8"><div className="flex gap-3"><button onClick={closeDrawer} className="rounded-lg border border-[#cfe0ff] bg-white px-5 py-2.5 text-sm font-semibold text-[#165dff] transition hover:bg-[#eef4ff]">取消</button><button onClick={() => setConfirmed(true)} disabled={isConfirmDisabled} className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(22,93,255,0.2)] transition ${isConfirmDisabled ? "cursor-not-allowed bg-[#9ec1ff]" : "bg-[#165dff] hover:bg-[#0e42d2]"}`}>{confirmButtonText}</button></div></div>
             <AnimatePresence>{confirmed && <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-lg bg-[#101828] px-4 py-2 text-sm text-white shadow-xl">{successToastText}</motion.div>}</AnimatePresence>
           </motion.aside>
         </>}
