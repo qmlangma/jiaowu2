@@ -80,12 +80,12 @@ const WITHDRAW_DEMO_CASES: {
   scenario: DemoScenario;
   label: string;
 }[] = [
-  { kind: "operations", scenario: "standard", label: "无任何优惠案例" },
-  { kind: "operations", scenario: "discount_activity", label: "有优惠-按优惠价计费案例" },
-  { kind: "operations", scenario: "discount_original", label: "有优惠-按原价计费案例" },
-  { kind: "finance", scenario: "standard", label: "无任何优惠案例" },
-  { kind: "finance", scenario: "discount_activity", label: "有优惠-按优惠价计费案例" },
-  { kind: "finance", scenario: "discount_original", label: "有优惠-按原价计费案例" },
+  { kind: "operations", scenario: "standard", label: "案例1：未使用任何优惠的订单" },
+  { kind: "operations", scenario: "discount_activity", label: "案例2：使用了 按优惠价计费 的订单" },
+  { kind: "operations", scenario: "discount_original", label: "案例3：使用了 按原价计费 的订单" },
+  { kind: "finance", scenario: "standard", label: "案例1：未使用任何优惠的订单" },
+  { kind: "finance", scenario: "discount_activity", label: "案例2：使用了 按优惠价计费 的订单" },
+  { kind: "finance", scenario: "discount_original", label: "案例3：使用了 按原价计费 的订单" },
 ];
 
 function SectionTitle({ icon: Icon, children }: { icon: typeof FileText; children: string }) {
@@ -504,14 +504,14 @@ export default function App() {
                 onClick={() => openSpecialRefundDemo("standard")}
                 className="group flex w-full items-center justify-between rounded-[20px] border border-[#e5e9f0] bg-white px-4 py-4 text-left text-[15px] font-medium text-[#344054] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-[#cbd5e1] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] hover:text-[#165dff] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff] sm:px-5 sm:py-5"
               >
-                <span className="max-w-[calc(100%-32px)] leading-6">原订单无任何优惠案例</span>
+                <span className="max-w-[calc(100%-32px)] leading-6">案例1：原始订单未使用任何优惠</span>
                 <span aria-hidden="true" className="text-xl font-normal leading-none text-[#98a2b3] transition group-hover:translate-x-1 group-hover:text-[#165dff]">→</span>
               </button>
               <button
                 onClick={() => openSpecialRefundDemo("discount_activity")}
                 className="group flex w-full items-center justify-between rounded-[20px] border border-[#e5e9f0] bg-white px-4 py-4 text-left text-[15px] font-medium text-[#344054] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-[#cbd5e1] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] hover:text-[#165dff] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff] sm:px-5 sm:py-5"
               >
-                <span className="max-w-[calc(100%-32px)] leading-6">原订单存在优惠案例</span>
+                <span className="max-w-[calc(100%-32px)] leading-6">案例2：原始订单使用了优惠</span>
                 <span aria-hidden="true" className="text-xl font-normal leading-none text-[#98a2b3] transition group-hover:translate-x-1 group-hover:text-[#165dff]">→</span>
               </button>
               <button
