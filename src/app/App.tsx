@@ -6,6 +6,7 @@ import {
   CircleHelp,
   CreditCard,
   FileText,
+  Settings2,
   X,
 } from "lucide-react";
 
@@ -19,12 +20,30 @@ type ServiceMode = "withdraw" | "refund";
 type DemoScenario = "standard" | "discount_activity" | "discount_original";
 type WithdrawSelectionMode = "range" | "multi";
 type WithdrawDemoKind = "operations" | "finance";
+type SpecialRefundPanel = "form" | "applications";
 type SpecialRefundScenario =
   | "online_rebate"
   | "high_end_half"
   | "discount_diff"
   | "single_lesson"
   | "custom_refund";
+type SpecialApplicationStatus = "pending" | "completed" | "rejected";
+type ConfigPanel = "onlineRebate" | "cashDiscount" | "activity" | "personal" | null;
+type ApprovalPageTab = SpecialApplicationStatus;
+type SpecialRefundApplication = {
+  id: string;
+  applicant: string;
+  scenarioId: SpecialRefundScenario;
+  scenarioLabel: string;
+  refundMethod: string;
+  campus: string;
+  amount: number;
+  submitTime: string;
+  status: SpecialApplicationStatus;
+  approver?: string;
+  completedTime?: string;
+  rejectReason?: string;
+};
 type DiscountOptionId =
   | "plan_one"
   | "plan_two"
@@ -44,14 +63,13 @@ type DetailView = "discount" | "paid" | "withdrawRefund" | "specialRefund" | "cu
 const lessons: { id: number; state: LessonState; delivery: LessonDelivery }[] = Array.from({ length: 15 }, (_, index) => ({
   id: index + 1,
   state: index < 5 ? "completed" : "selectable",
-  delivery: index < 2 || index >= 9 ? "online" : "offline",
+  delivery: index === 2 || index === 3 ? "offline" : "online",
 }));
 
 const ORIGINAL_PRICE = 210;
 const ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS = 7;
 const ORIGINAL_PRICE_REFUND_TRANSITION_LESSON = 8;
 const ORIGINAL_PRICE_REFUND_TRANSITION_AMOUNT = 105;
-const ONLINE_REBATE_AMOUNT = 15;
 const REFUND_AMOUNT_HELP_TEXT =
   "可退金额 = 退课已退金额 + 线上课已返利金额 + 高端班半价已退金额 + 其他特殊退费已退金额";
 const DISCOUNT_OPTIONS: { id: DiscountOptionId; label: string; rate: number; description: string }[] = [
@@ -79,6 +97,90 @@ const SPECIAL_REFUND_SCENARIOS: {
   { id: "discount_diff", label: "优惠活动退差价", description: "重新绑定优惠，退回差价" },
   { id: "custom_refund", label: "自定义退费金额", description: "手动输入本次退费的金额" },
 ];
+const SPECIAL_APPLICATION_MOCK_DATA: SpecialRefundApplication[] = (() => {
+  const pendingTemplates: Omit<SpecialRefundApplication, "id" | "applicant" | "submitTime" | "status">[] = [
+    { scenarioId: "online_rebate", scenarioLabel: "线上课返利", refundMethod: "原路退回", campus: "五里墩校区", amount: 15 },
+    { scenarioId: "high_end_half", scenarioLabel: "高端班半价", refundMethod: "原路退回", campus: "蜀山校区", amount: 735 },
+    { scenarioId: "custom_refund", scenarioLabel: "自定义退费金额", refundMethod: "银行转账", campus: "政务区校区", amount: 368 },
+    { scenarioId: "discount_diff", scenarioLabel: "优惠活动退差价", refundMethod: "现金退款", campus: "五里墩校区", amount: 630 },
+    { scenarioId: "online_rebate", scenarioLabel: "线上课返利", refundMethod: "原路退回", campus: "滨湖校区", amount: 30 },
+    { scenarioId: "high_end_half", scenarioLabel: "高端班半价", refundMethod: "原路退回", campus: "南七校区", amount: 525 },
+    { scenarioId: "custom_refund", scenarioLabel: "自定义退费金额", refundMethod: "银行转账", campus: "蜀山校区", amount: 210 },
+    { scenarioId: "discount_diff", scenarioLabel: "优惠活动退差价", refundMethod: "现金退款", campus: "包河校区", amount: 315 },
+    { scenarioId: "online_rebate", scenarioLabel: "线上课返利", refundMethod: "原路退回", campus: "经开校区", amount: 15 },
+    { scenarioId: "high_end_half", scenarioLabel: "高端班半价", refundMethod: "原路退回", campus: "政务区校区", amount: 420 },
+    { scenarioId: "custom_refund", scenarioLabel: "自定义退费金额", refundMethod: "银行转账", campus: "滨湖校区", amount: 588 },
+    { scenarioId: "discount_diff", scenarioLabel: "优惠活动退差价", refundMethod: "现金退款", campus: "五里墩校区", amount: 210 },
+    { scenarioId: "online_rebate", scenarioLabel: "线上课返利", refundMethod: "原路退回", campus: "蜀山校区", amount: 45 },
+    { scenarioId: "high_end_half", scenarioLabel: "高端班半价", refundMethod: "原路退回", campus: "南七校区", amount: 315 },
+    { scenarioId: "custom_refund", scenarioLabel: "自定义退费金额", refundMethod: "银行转账", campus: "经开校区", amount: 178 },
+    { scenarioId: "discount_diff", scenarioLabel: "优惠活动退差价", refundMethod: "现金退款", campus: "政务区校区", amount: 420 },
+    { scenarioId: "online_rebate", scenarioLabel: "线上课返利", refundMethod: "原路退回", campus: "五里墩校区", amount: 15 },
+    { scenarioId: "high_end_half", scenarioLabel: "高端班半价", refundMethod: "原路退回", campus: "蜀山校区", amount: 630 },
+    { scenarioId: "custom_refund", scenarioLabel: "自定义退费金额", refundMethod: "银行转账", campus: "包河校区", amount: 256 },
+    { scenarioId: "discount_diff", scenarioLabel: "优惠活动退差价", refundMethod: "现金退款", campus: "滨湖校区", amount: 525 },
+    { scenarioId: "online_rebate", scenarioLabel: "线上课返利", refundMethod: "原路退回", campus: "南七校区", amount: 30 },
+    { scenarioId: "high_end_half", scenarioLabel: "高端班半价", refundMethod: "原路退回", campus: "政务区校区", amount: 840 },
+    { scenarioId: "custom_refund", scenarioLabel: "自定义退费金额", refundMethod: "银行转账", campus: "五里墩校区", amount: 399 },
+  ];
+  const pendingApplicants = [
+    "王倩",
+    "刘宁",
+    "周敏",
+    "黄然",
+    "许诺",
+    "陈晨",
+    "宋佳",
+    "赵婷",
+    "李昊",
+    "孙悦",
+    "张琪",
+    "唐婧",
+    "高杰",
+    "邓超",
+    "何雨",
+    "胡可",
+    "邹彤",
+    "郑楠",
+    "蒋文",
+    "潘宇",
+    "谢琳",
+    "袁晨",
+    "白雪",
+  ];
+  const pending: SpecialRefundApplication[] = pendingTemplates.map((item, index) => ({
+    id: `SP-20260724-${String(index + 1).padStart(3, "0")}`,
+    applicant: pendingApplicants[index % pendingApplicants.length],
+    submitTime: `2026-07-24 ${String(9 + Math.floor(index / 4)).padStart(2, "0")}:${String((index * 7) % 60).padStart(2, "0")}`,
+    status: "pending",
+    ...item,
+  }));
+
+  const completed: SpecialRefundApplication[] = [
+    { id: "SP-20260723-024", applicant: "段婷", scenarioId: "discount_diff", scenarioLabel: "优惠活动退差价", refundMethod: "现金退款", campus: "五里墩校区", amount: 630, submitTime: "2026-07-23 17:12", status: "completed", approver: "财务主管李敏", completedTime: "2026-07-23 18:20" },
+    { id: "SP-20260723-025", applicant: "谭浩", scenarioId: "high_end_half", scenarioLabel: "高端班半价", refundMethod: "原路退回", campus: "南七校区", amount: 525, submitTime: "2026-07-23 15:38", status: "completed", approver: "财务主管李敏", completedTime: "2026-07-23 16:44" },
+    { id: "SP-20260722-026", applicant: "韩雪", scenarioId: "online_rebate", scenarioLabel: "线上课返利", refundMethod: "原路退回", campus: "五里墩校区", amount: 30, submitTime: "2026-07-22 16:12", status: "completed", approver: "财务主管王蕾", completedTime: "2026-07-22 16:58" },
+    { id: "SP-20260722-027", applicant: "郑鑫", scenarioId: "custom_refund", scenarioLabel: "自定义退费金额", refundMethod: "银行转账", campus: "滨湖校区", amount: 210, submitTime: "2026-07-22 14:35", status: "completed", approver: "财务主管王蕾", completedTime: "2026-07-22 15:20" },
+    { id: "SP-20260721-028", applicant: "任芳", scenarioId: "discount_diff", scenarioLabel: "优惠活动退差价", refundMethod: "现金退款", campus: "蜀山校区", amount: 315, submitTime: "2026-07-21 10:07", status: "completed", approver: "财务主管李敏", completedTime: "2026-07-21 10:52" },
+  ];
+
+  const rejected: SpecialRefundApplication[] = [
+    { id: "SP-20260722-029", applicant: "黄然", scenarioId: "custom_refund", scenarioLabel: "自定义退费金额", refundMethod: "银行转账", campus: "滨湖校区", amount: 210, submitTime: "2026-07-22 14:35", status: "rejected", approver: "财务主管王蕾", completedTime: "2026-07-22 15:20", rejectReason: "银行账户信息不完整" },
+    { id: "SP-20260721-030", applicant: "许诺", scenarioId: "discount_diff", scenarioLabel: "优惠活动退差价", refundMethod: "现金退款", campus: "蜀山校区", amount: 315, submitTime: "2026-07-21 10:07", status: "rejected", approver: "财务主管李敏", completedTime: "2026-07-21 10:52", rejectReason: "优惠方案未重新确认" },
+    { id: "SP-20260721-031", applicant: "周岚", scenarioId: "online_rebate", scenarioLabel: "线上课返利", refundMethod: "原路退回", campus: "政务区校区", amount: 15, submitTime: "2026-07-21 09:25", status: "rejected", approver: "财务主管王蕾", completedTime: "2026-07-21 10:08", rejectReason: "课次状态尚未确认" },
+  ];
+
+  return [...pending, ...completed, ...rejected];
+})();
+const SPECIAL_APPLICATION_STATUS_OPTIONS: { id: "all" | SpecialApplicationStatus; label: string }[] = [
+  { id: "all", label: "全部" },
+  { id: "pending", label: "待处理" },
+  { id: "completed", label: "已完成" },
+  { id: "rejected", label: "已驳回" },
+];
+function getSpecialScenarioLabel(id: SpecialRefundScenario) {
+  return SPECIAL_REFUND_SCENARIOS.find((item) => item.id === id)?.label ?? id;
+}
 const WITHDRAW_DEMO_CASES: {
   kind: WithdrawDemoKind;
   scenario: DemoScenario;
@@ -111,6 +213,12 @@ function ApprovalTag() {
   );
 }
 
+const APPROVAL_TABS: { id: ApprovalPageTab; label: string }[] = [
+  { id: "pending", label: "待处理" },
+  { id: "completed", label: "已完成" },
+  { id: "rejected", label: "已驳回" },
+];
+
 function LessonSelectionEmptyState({
   title = "请先选择课次",
   description = "选择后会在这里展示退费拆分结果",
@@ -138,9 +246,139 @@ function LessonSelectionEmptyState({
   );
 }
 
+function RefundApprovalPage({
+  applications,
+  activeTab,
+  onBack,
+  onChangeTab,
+}: {
+  applications: SpecialRefundApplication[];
+  activeTab: ApprovalPageTab;
+  onBack: () => void;
+  onChangeTab: (tab: ApprovalPageTab) => void;
+}) {
+  const formatMoney = (amount: number) => amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const filteredApplications = applications.filter((item) => item.status === activeTab);
+  const tabCounts = {
+    pending: applications.filter((item) => item.status === "pending").length,
+    completed: applications.filter((item) => item.status === "completed").length,
+    rejected: applications.filter((item) => item.status === "rejected").length,
+  };
+
+  return (
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#ffffff_0%,_#f5f7fb_42%,_#eef3fb_100%)] px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <div className="mx-auto w-full max-w-[1280px] space-y-6">
+        <div className="rounded-[28px] border border-[#e5e9f0] bg-[rgba(255,255,255,0.88)] px-4 py-4 shadow-[0_14px_30px_rgba(15,23,42,0.08)] backdrop-blur-md sm:px-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#7b8190]">Refund Approval</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-[#111827]">财务退款审批</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#667085]">这里集中展示财务提交的退款申请，默认定位到你进入时选择的审批状态。</p>
+            </div>
+            <button
+              onClick={onBack}
+              className="inline-flex items-center justify-center rounded-full bg-[#173f66] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(23,63,102,0.18)] transition hover:-translate-y-0.5 hover:bg-[#103552]"
+            >
+              返回首页
+            </button>
+          </div>
+        </div>
+
+        <section className="overflow-hidden rounded-[32px] border border-[#e5e9f0] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
+          <div className="border-b border-[#edf0f4] px-6 py-5 sm:px-8">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-semibold tracking-[-0.02em] text-[#1d2939]">审批状态概览</h2>
+              <ApprovalTag />
+            </div>
+          </div>
+          <div className="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 md:grid-cols-3">
+            {APPROVAL_TABS.map((tab) => (
+              <div key={tab.id} className="rounded-[20px] border border-[#e5e9f0] bg-[#f8fafc] px-4 py-4">
+                <p className="text-xs font-medium text-[#667085]">{tab.label}</p>
+                <p className="mt-1 text-2xl font-semibold text-[#1d2939]">{tabCounts[tab.id]}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-[32px] border border-[#e5e9f0] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
+          <div className="border-b border-[#edf0f4] px-6 py-5 sm:px-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold tracking-[-0.02em] text-[#1d2939]">审批列表</h2>
+                <p className="mt-1 text-sm text-[#667085]">默认显示 {APPROVAL_TABS.find((item) => item.id === activeTab)?.label} 申请。</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {APPROVAL_TABS.map((tab) => {
+                  const active = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => onChangeTab(tab.id)}
+                      className={`rounded-full px-4 py-2 text-sm font-medium transition ${active ? "bg-[#165dff] text-white" : "bg-[#f8fafc] text-[#344054] ring-1 ring-[#dbe5ff] hover:bg-[#eef4ff]"}`}
+                    >
+                      {tab.label}
+                      <span className="ml-1 opacity-80">({tabCounts[tab.id]})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="divide-y divide-[#edf0f4]">
+            {filteredApplications.length ? (
+              filteredApplications.map((item) => {
+                const statusClass =
+                  item.status === "pending"
+                    ? "bg-[#fff7ed] text-[#b54708]"
+                    : item.status === "completed"
+                      ? "bg-[#ecfdf3] text-[#027a48]"
+                      : "bg-[#fef3f2] text-[#b42318]";
+                return (
+                  <div key={item.id} className="flex flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-[#1d2939]">{item.scenarioLabel}</p>
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClass}`}>
+                          {item.status === "pending" ? "待处理" : item.status === "completed" ? "已完成" : "已驳回"}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#667085]">
+                        <span>申请编号：{item.id}</span>
+                        <span>申请人：{item.applicant}</span>
+                        <span>办理校区：{item.campus}</span>
+                        <span>退款方式：{item.refundMethod}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#667085]">
+                        <span>提交时间：{item.submitTime}</span>
+                        <span>申请金额：¥ {formatMoney(item.amount)}</span>
+                        <span>关联场景：{getSpecialScenarioLabel(item.scenarioId)}</span>
+                      </div>
+                    </div>
+                    <div className="min-w-[220px] rounded-xl bg-[#f8fafc] px-4 py-3 text-sm text-[#344054]">
+                      {item.status === "pending" && <p>当前流转：等待财务复核与审批。</p>}
+                      {item.status === "completed" && <p>已完成于 {item.completedTime}，审批人 {item.approver}。</p>}
+                      {item.status === "rejected" && <p>已驳回于 {item.completedTime}，原因：{item.rejectReason}</p>}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="px-4 py-10 text-center text-sm text-[#667085]">当前状态下没有申请记录。</div>
+            )}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 export default function App() {
-  const [activePage, setActivePage] = useState<"home" | "analysis">("home");
+  const [activePage, setActivePage] = useState<"home" | "analysis" | "approval">("home");
+  const [approvalTab, setApprovalTab] = useState<ApprovalPageTab>("pending");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [configPanel, setConfigPanel] = useState<ConfigPanel>(null);
   const [detailView, setDetailView] = useState<DetailView>(null);
   const [showAllLessonRows, setShowAllLessonRows] = useState(false);
   const [mode, setMode] = useState<ServiceMode>("withdraw");
@@ -149,6 +387,9 @@ export default function App() {
   const [specialDiscount, setSpecialDiscount] = useState<DiscountOptionId>("special_five");
   const [discountDropdownOpen, setDiscountDropdownOpen] = useState(false);
   const [specialSelectedLessonIds, setSpecialSelectedLessonIds] = useState<number[]>([]);
+  const [specialPanel, setSpecialPanel] = useState<SpecialRefundPanel>("form");
+  const [specialApplications, setSpecialApplications] = useState<SpecialRefundApplication[]>(SPECIAL_APPLICATION_MOCK_DATA);
+  const [specialApplicationStatus, setSpecialApplicationStatus] = useState<"all" | SpecialApplicationStatus>("all");
   const [customRefundAmount, setCustomRefundAmount] = useState("0");
   const [customAllocationMode, setCustomAllocationMode] = useState<"lesson" | "spread">("spread");
   const [withdrawSelectionMode, setWithdrawSelectionMode] = useState<WithdrawSelectionMode>("range");
@@ -158,6 +399,8 @@ export default function App() {
   const [bankTransferAccountName, setBankTransferAccountName] = useState("");
   const [bankTransferAccountNumber, setBankTransferAccountNumber] = useState("");
   const [bankTransferBankName, setBankTransferBankName] = useState("");
+  const [onlineRebateGlobalAmount, setOnlineRebateGlobalAmount] = useState(30);
+  const [cashPaymentGlobalDiscount, setCashPaymentGlobalDiscount] = useState(50);
   const [reason, setReason] = useState("");
   const [selectedStart, setSelectedStart] = useState<number | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -165,7 +408,7 @@ export default function App() {
   const isOriginalPriceRefund = scenario === "discount_original";
   const paymentMethod = hasDiscount ? "富友" : "现金支付";
   const isCashPayment = paymentMethod === "现金支付";
-  const cashPaymentDiscountAmount = isCashPayment ? 50 : 0;
+  const cashPaymentDiscountAmount = isCashPayment ? cashPaymentGlobalDiscount : 0;
   const canEditRefundMethod = currentDemoKind === "finance";
 
   const selectedLessons =
@@ -181,8 +424,18 @@ export default function App() {
   const orderInfoGridCols = isCashPayment ? "sm:grid-cols-6" : "sm:grid-cols-5";
   const specialScenarioLessons =
     specialScenario === "online_rebate"
-      ? lessons.map((lesson) => (lesson.id >= 4 ? { ...lesson, delivery: "online" as LessonDelivery } : lesson))
+      ? lessons.map((lesson) => ({
+          ...lesson,
+          delivery: lesson.id === 3 || lesson.id === 4 ? "offline" : "online",
+        }))
       : lessons;
+  const getOnlineRebateAmount = () => onlineRebateGlobalAmount;
+  const getOnlineRebateAdjustedAmount = (lesson: { id: number; state: LessonState; delivery: LessonDelivery }) => {
+    if (lesson.delivery !== "online" || lesson.state !== "completed") return 0;
+    const rebateBaseAmount = getOnlineRebateAmount();
+    const paidAmount = getCurrentLessonPaidAmount(lesson);
+    return Number(((rebateBaseAmount * paidAmount) / ORIGINAL_PRICE).toFixed(2));
+  };
   const getCurrentLessonPaidAmount = (lesson: { id: number; state: LessonState }) => {
     if (isOriginalPriceRefund) return getOriginalPriceRefundLessonPaid(lesson.id);
     if (hasDiscount) return 105;
@@ -247,7 +500,7 @@ export default function App() {
   const getSpecialLessonRefundableAmount = (lesson: { id: number; state: LessonState; delivery: LessonDelivery }) => {
     switch (specialScenario) {
       case "online_rebate":
-        return lesson.delivery === "online" && lesson.state === "completed" ? ONLINE_REBATE_AMOUNT : 0;
+        return getOnlineRebateAdjustedAmount(lesson);
       case "high_end_half":
         return lesson.state === "completed" ? ORIGINAL_PRICE / 2 : 0;
       case "discount_diff":
@@ -270,7 +523,7 @@ export default function App() {
 
   const getSpecialLessonConsumption = (lesson: { id: number; state: LessonState; delivery: LessonDelivery }) => {
     if (specialScenario === "online_rebate") {
-      return lesson.delivery === "online" && lesson.state === "completed" ? ONLINE_REBATE_AMOUNT : 0;
+      return getOnlineRebateAdjustedAmount(lesson);
     }
     if (specialScenario === "high_end_half") {
       return lesson.state === "completed" ? ORIGINAL_PRICE / 2 : 0;
@@ -291,7 +544,7 @@ export default function App() {
   function getSpecialLessonRefundableAmountForMax(lesson: { id: number; state: LessonState; delivery: LessonDelivery }) {
     switch (specialScenario) {
       case "online_rebate":
-        return lesson.delivery === "online" && lesson.state === "completed" ? ONLINE_REBATE_AMOUNT : 0;
+        return getOnlineRebateAdjustedAmount(lesson);
       case "high_end_half":
         return lesson.state === "completed" ? ORIGINAL_PRICE / 2 : 0;
       case "discount_diff":
@@ -336,12 +589,14 @@ export default function App() {
   const formatMoney = (amount: number) => amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const formatSignedMoney = (amount: number) => (amount < 0 ? `-¥ ${formatMoney(Math.abs(amount))}` : `¥ ${formatMoney(amount)}`);
   const selectableLessons = lessons.filter((lesson) => lesson.state === "selectable");
-  const showSpecialRefundCourseTable = detailView === "specialRefund" && mode === "refund" && (specialScenario === "online_rebate" || specialScenario === "high_end_half");
-  const showDiscountDiffCourseTable = detailView === "specialRefund" && mode === "refund" && specialScenario === "discount_diff";
+  const showSpecialRefundForm = mode === "refund" && specialPanel === "form";
+  const showRefundApplications = mode === "refund" && specialPanel === "applications";
+  const showSpecialRefundCourseTable = detailView === "specialRefund" && showSpecialRefundForm && (specialScenario === "online_rebate" || specialScenario === "high_end_half");
+  const showDiscountDiffCourseTable = detailView === "specialRefund" && showSpecialRefundForm && specialScenario === "discount_diff";
   const showSingleLessonRefundCourseTable =
-    detailView === "specialRefund" && mode === "refund" && specialScenario === "single_lesson" && specialSelectedLessonIds.length > 0;
+    detailView === "specialRefund" && showSpecialRefundForm && specialScenario === "single_lesson" && specialSelectedLessonIds.length > 0;
   const showSingleLessonSelectionPrompt =
-    detailView === "specialRefund" && mode === "refund" && specialScenario === "single_lesson" && specialSelectedLessonIds.length === 0;
+    detailView === "specialRefund" && showSpecialRefundForm && specialScenario === "single_lesson" && specialSelectedLessonIds.length === 0;
   const isFinanceSingleLessonWithdraw = mode === "withdraw" && withdrawSelectionMode === "multi";
   const withdrawLessonSelectionTitle = isFinanceSingleLessonWithdraw ? "选择要退的课次（支持多选）" : "选择要退的课次";
   const withdrawLessonSelectionHint = isFinanceSingleLessonWithdraw ? "已下课课次也可选" : "请选择起始课次";
@@ -349,7 +604,7 @@ export default function App() {
   const specialRefundSummaryText = (() => {
     switch (specialScenario) {
       case "online_rebate":
-        return specialRefundableLessonCount ? `可返利 ${specialRefundableLessonCount} 课次 ✕ ¥${formatMoney(ONLINE_REBATE_AMOUNT)}` : "";
+        return specialRefundableLessonCount ? `可返利 ${specialRefundableLessonCount} 课次，合计 ¥${formatMoney(specialRefundAmount)}` : "";
       case "high_end_half":
         return specialRefundableLessonCount ? `高端班可退 ${specialRefundableLessonCount} 课次 ✕ ¥${formatMoney(ORIGINAL_PRICE / 2)}` : "";
       case "discount_diff":
@@ -373,6 +628,21 @@ export default function App() {
     customRefundFormulaCourseTotal - customRefundFormulaDiscount - customRefundFormulaConsumption - customRefundFormulaRefunded;
   const customRefundFormulaText = `课程总价¥${formatMoney(customRefundFormulaCourseTotal)}-优惠金额¥${formatMoney(customRefundFormulaDiscount)}-课耗金额¥${formatMoney(customRefundFormulaConsumption)}-已退金额¥${formatMoney(customRefundFormulaRefunded)}=¥${formatMoney(customRefundFormulaAmount)}`;
   const specialRefundMaxAmount = specialScenario === "custom_refund" ? customRefundFormulaAmount : getSpecialMaxRefundableAmount();
+  const specialApplicationList = specialApplications.filter(
+    (item) => specialApplicationStatus === "all" || item.status === specialApplicationStatus,
+  );
+  const specialApplicationStatusCounts = {
+    all: specialApplications.length,
+    pending: specialApplications.filter((item) => item.status === "pending").length,
+    completed: specialApplications.filter((item) => item.status === "completed").length,
+    rejected: specialApplications.filter((item) => item.status === "rejected").length,
+  };
+  const openConfigPanel = (panel: Exclude<ConfigPanel, null>) => setConfigPanel(panel);
+  const closeConfigPanel = () => setConfigPanel(null);
+  function getOnlineRebateRefundableLessonId() {
+    if (specialScenario !== "online_rebate") return null;
+    return specialScenarioLessons.find((lesson) => lesson.delivery === "online" && lesson.state === "completed")?.id ?? null;
+  }
 
   useEffect(() => {
     if (specialScenario !== "custom_refund") return;
@@ -409,8 +679,7 @@ export default function App() {
   function getSpecialLessonRefundedAmount(lesson: { id: number; state: LessonState; delivery: LessonDelivery }) {
     if (specialScenario === "online_rebate") {
       if (lesson.delivery !== "online" || lesson.state !== "completed") return 0;
-      const onlineCompletedIndex = completedOnlineLessons.findIndex((item) => item.id === lesson.id);
-      return onlineCompletedIndex === 0 ? ONLINE_REBATE_AMOUNT : 0;
+      return lesson.id === getOnlineRebateRefundableLessonId() ? getOnlineRebateAdjustedAmount(lesson) : 0;
     }
     if (specialScenario === "high_end_half") {
       if (lesson.id === 4) return ORIGINAL_PRICE / 2;
@@ -422,7 +691,7 @@ export default function App() {
   function getSpecialLessonRemainingRefundAmount(lesson: { id: number; state: LessonState; delivery: LessonDelivery }) {
     if (specialScenario === "online_rebate") {
       if (lesson.delivery !== "online" || lesson.state !== "completed") return 0;
-      return getSpecialLessonRefundedAmount(lesson) === 0 ? ONLINE_REBATE_AMOUNT : 0;
+      return lesson.id === getOnlineRebateRefundableLessonId() ? getOnlineRebateAdjustedAmount(lesson) : 0;
     }
     if (specialScenario === "high_end_half") {
       if (lesson.id >= 5) return ORIGINAL_PRICE / 2;
@@ -433,7 +702,7 @@ export default function App() {
 
   function getSpecialLessonTag(lesson: { id: number; state: LessonState; delivery: LessonDelivery }) {
     if (specialScenario === "online_rebate") {
-      return lesson.delivery === "online" ? "线上课" : "线下课";
+      return lesson.delivery === "online" ? "线上课" : "";
     }
     if (specialScenario === "high_end_half") {
       return lesson.id >= 4 ? "高端班" : "非高端班";
@@ -457,6 +726,8 @@ export default function App() {
     setDetailView(null);
     setShowAllLessonRows(false);
     setConfirmed(false);
+    setSpecialPanel("form");
+    setSpecialApplicationStatus("all");
     setSpecialSelectedLessonIds([]);
     setCustomRefundAmount("0");
     setCustomAllocationMode("spread");
@@ -487,6 +758,7 @@ export default function App() {
     setWithdrawSelectionMode(selectionMode);
     setSpecialDiscount(nextScenario === "discount_original" ? "special_five_original" : "special_five");
     setMode("withdraw");
+    setSpecialPanel("form");
     setDrawerOpen(true);
   };
 
@@ -498,6 +770,7 @@ export default function App() {
     setBankTransferAccountNumber("");
     setBankTransferBankName("");
     setMode("refund");
+    setSpecialPanel("form");
     setDetailView(null);
     setShowAllLessonRows(false);
     setSpecialScenario(nextScenario === "discount_activity" ? "discount_diff" : "online_rebate");
@@ -507,6 +780,31 @@ export default function App() {
     setCustomAllocationMode("spread");
     setDiscountDropdownOpen(false);
     setDrawerOpen(true);
+  };
+
+  const openApprovalPage = (tab: ApprovalPageTab) => {
+    setApprovalTab(tab);
+    setActivePage("approval");
+  };
+
+  const submitCurrentRefundApplication = () => {
+    if (mode === "refund" && specialPanel === "form") {
+      setSpecialApplications((current) => [
+        {
+          id: `SP-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${String(current.length + 1).padStart(3, "0")}`,
+          applicant: "财务操作员",
+          scenarioId: specialScenario,
+          scenarioLabel: getSpecialScenarioLabel(specialScenario),
+          refundMethod,
+          campus: "五里墩校区",
+          amount: specialRefundAmount,
+          submitTime: "2026-07-24 10:30",
+          status: "pending",
+        },
+        ...current,
+      ]);
+    }
+    setConfirmed(true);
   };
 
   if (activePage === "analysis") {
@@ -523,25 +821,67 @@ export default function App() {
     );
   }
 
+  if (activePage === "approval") {
+    return (
+      <RefundApprovalPage
+        applications={specialApplications}
+        activeTab={approvalTab}
+        onBack={() => setActivePage("home")}
+        onChangeTab={setApprovalTab}
+      />
+    );
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_#ffffff_0%,_#f5f7fb_42%,_#eef3fb_100%)] font-['Noto_Sans_SC'] text-[#182230]">
       <div className="mx-auto w-full max-w-[1200px] px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         <div className="space-y-10">
-          <div className="sticky top-4 z-20 rounded-[28px] border border-[#e5e9f0] bg-[rgba(255,255,255,0.88)] px-4 py-4 shadow-[0_14px_30px_rgba(15,23,42,0.08)] backdrop-blur-md sm:px-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#7b8190]">Refund Demo</p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-[#111827]">退款演示首页</h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#667085]">
-                  这里展示退课和特殊退费的业务流程，右上角可以直接切换到退款明细数据分析页。
-                </p>
+          <div className="sticky top-4 z-20 rounded-[28px] border border-[#e5e9f0] bg-[rgba(255,255,255,0.9)] px-5 py-5 shadow-[0_14px_30px_rgba(15,23,42,0.08)] backdrop-blur-md sm:px-6 sm:py-6">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-4">
+                <h1 className="text-[34px] font-black tracking-[-0.06em] text-[#111827] sm:text-[42px] xl:text-[54px]">退款演示页面</h1>
+                <button
+                  onClick={() => setActivePage("analysis")}
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-[#dbe3ef] bg-white px-4 text-[15px] font-semibold text-[#1d2939] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#bcd1ff] hover:text-[#165dff] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff]"
+                >
+                  查看数据分析
+                </button>
               </div>
-              <button
-                onClick={() => setActivePage("analysis")}
-                className="inline-flex items-center justify-center rounded-full bg-[#173f66] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(23,63,102,0.18)] transition hover:-translate-y-0.5 hover:bg-[#103552]"
-              >
-                查看数据分析
-              </button>
+
+              <div className="flex flex-wrap items-center gap-3 xl:justify-end">
+                {[
+                  {
+                    title: "线上课返利金额",
+                    description: "统一配置返利金额，所有线上课次退款时都读取同一个值。",
+                    onClick: () => openConfigPanel("onlineRebate"),
+                  },
+                  {
+                    title: "现金支付优惠",
+                    description: "配置全局现金支付优惠金额，订单内自动读取该配置。",
+                    onClick: () => openConfigPanel("cashDiscount"),
+                  },
+                  {
+                    title: "优惠活动配置",
+                    description: "用于维护优惠活动规则，当前仅保留入口。",
+                    onClick: () => openConfigPanel("activity"),
+                  },
+                  {
+                    title: "个人折扣配置",
+                    description: "用于维护个人折扣规则，当前仅保留入口。",
+                    onClick: () => openConfigPanel("personal"),
+                  },
+                ].map((item) => (
+                  <button
+                    key={item.title}
+                    type="button"
+                    onClick={item.onClick}
+                    className="group inline-flex h-11 items-center gap-2 rounded-full border border-[#d1d5db] bg-white px-4 text-[14px] font-semibold text-[#344054] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#bcd1ff] hover:text-[#165dff] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff]"
+                  >
+                    <Settings2 size={14} strokeWidth={2.4} className="text-[#667085] transition group-hover:text-[#165dff]" />
+                    <span className="whitespace-nowrap">{item.title}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <section className="overflow-hidden rounded-[32px] border border-[#e5e9f0] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
@@ -592,7 +932,7 @@ export default function App() {
                 <ApprovalTag />
               </div>
             </div>
-            <div className="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 md:grid-cols-3">
+            <div className="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 md:grid-cols-2">
               <button
                 onClick={() => openSpecialRefundDemo("standard")}
                 className="group flex w-full items-center justify-between rounded-[20px] border border-[#e5e9f0] bg-white px-4 py-4 text-left text-[15px] font-medium text-[#344054] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-[#cbd5e1] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] hover:text-[#165dff] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff] sm:px-5 sm:py-5"
@@ -607,13 +947,61 @@ export default function App() {
                 <span className="max-w-[calc(100%-32px)] leading-6">案例2：原始订单使用了优惠</span>
                 <span aria-hidden="true" className="text-xl font-normal leading-none text-[#98a2b3] transition group-hover:translate-x-1 group-hover:text-[#165dff]">→</span>
               </button>
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-[32px] border border-[#e5e9f0] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
+            <div className="border-b border-[#edf0f4] px-6 py-5 sm:px-8">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold tracking-[-0.02em] text-[#1d2939]">【财务】批量退费演示</h2>
+                <ApprovalTag />
+              </div>
+            </div>
+            <div className="px-4 py-4 sm:px-5 sm:py-5">
               <button
                 type="button"
                 disabled
-                className="group flex w-full items-center justify-between rounded-[20px] border border-dashed border-[#dbe3ef] bg-[#f8fafc] px-4 py-4 text-left text-[15px] font-medium text-[#98a2b3] sm:px-5 sm:py-5"
+                className="group flex w-full items-center justify-between rounded-[20px] border border-dashed border-[#dbe3ef] bg-[#f8fafc] px-4 py-4 text-left text-[15px] font-medium text-[#667085] shadow-[0_1px_2px_rgba(15,23,42,0.04)] opacity-90 sm:px-5 sm:py-5"
               >
-                <span className="max-w-[calc(100%-32px)] leading-6">批量导入特殊退费</span>
-                <span aria-hidden="true" className="text-xl font-normal leading-none text-[#cbd5e1]">→</span>
+                <span className="max-w-[calc(100%-92px)] leading-6">功能入口预留，暂未开发</span>
+                <span className="inline-flex h-6 items-center rounded-full border border-[#dbe3ef] bg-white px-2.5 text-[11px] font-medium leading-none text-[#667085]">
+                  暂未开发
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-[32px] border border-[#e5e9f0] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
+            <div className="border-b border-[#edf0f4] px-6 py-5 sm:px-8">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold tracking-[-0.02em] text-[#1d2939]">【财务退款审批】</h2>
+                <ApprovalTag />
+              </div>
+            </div>
+            <div className="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 md:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => openApprovalPage("pending")}
+                className="group flex w-full items-center justify-between rounded-[20px] border border-[#e5e9f0] bg-white px-4 py-4 text-left text-[15px] font-medium text-[#344054] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-[#cbd5e1] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] hover:text-[#165dff] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff] sm:px-5 sm:py-5"
+              >
+                <span className="max-w-[calc(100%-32px)] leading-6">待处理（{specialApplicationStatusCounts.pending}）</span>
+                <span aria-hidden="true" className="text-xl font-normal leading-none text-[#98a2b3] transition group-hover:translate-x-1 group-hover:text-[#165dff]">→</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => openApprovalPage("completed")}
+                className="group flex w-full items-center justify-between rounded-[20px] border border-[#e5e9f0] bg-white px-4 py-4 text-left text-[15px] font-medium text-[#344054] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-[#cbd5e1] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] hover:text-[#165dff] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff] sm:px-5 sm:py-5"
+              >
+                <span className="max-w-[calc(100%-32px)] leading-6">已完成（{specialApplicationStatusCounts.completed}）</span>
+                <span aria-hidden="true" className="text-xl font-normal leading-none text-[#98a2b3] transition group-hover:translate-x-1 group-hover:text-[#165dff]">→</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => openApprovalPage("rejected")}
+                className="group flex w-full items-center justify-between rounded-[20px] border border-[#e5e9f0] bg-white px-4 py-4 text-left text-[15px] font-medium text-[#344054] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-[#cbd5e1] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] hover:text-[#165dff] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff] sm:px-5 sm:py-5"
+              >
+                <span className="max-w-[calc(100%-32px)] leading-6">已驳回（{specialApplicationStatusCounts.rejected}）</span>
+                <span aria-hidden="true" className="text-xl font-normal leading-none text-[#98a2b3] transition group-hover:translate-x-1 group-hover:text-[#165dff]">→</span>
               </button>
             </div>
           </section>
@@ -638,11 +1026,11 @@ export default function App() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8">
-          <section className="mb-7"><SectionTitle icon={FileText}>订单信息</SectionTitle><div className="rounded-xl border border-[#e7ebf2] bg-white p-4"><div className="flex flex-col gap-4 border-b border-[#edf0f4] pb-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs text-[#98a2b3]">班级名称</p><p className="mt-1 text-sm font-medium leading-6 text-[#344054]">【暑假】一年级信息学算法一期 · 上午小星星柏悦中心</p></div><div className="shrink-0 sm:text-right"><p className="text-xs text-[#98a2b3]">所购课次</p><p className="mt-1 text-sm font-semibold text-[#344054]">1–15</p></div></div><div className={`grid grid-cols-2 gap-x-4 gap-y-3 pt-4 text-sm ${orderInfoGridCols}`}><div><p className="text-xs text-[#98a2b3]">课程总价</p><p className="mt-1 font-semibold">¥ 3,150.00</p></div><div><p className="text-xs text-[#98a2b3]">优惠金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">-¥ {hasDiscount ? "1,575.00" : "0.00"}</p>{hasDiscount && <button onClick={() => setDetailView("discount")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看优惠说明"><CircleHelp size={15} /></button>}</div></div>{isCashPayment && <div><p className="text-xs text-[#98a2b3]">现金支付优惠</p><p className="mt-1 font-semibold text-[#d85b18]">-¥ 50.00</p></div>}<div><p className="text-xs text-[#98a2b3]">实付金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">¥ {hasDiscount ? "1,575.00" : formatMoney(actualPaidAmount)}</p><button onClick={() => setDetailView("paid")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看实付金额明细"><CircleHelp size={15} /></button></div></div><div><p className="text-xs text-[#98a2b3]">付款方式</p><p className="mt-1 font-semibold">{paymentMethod}</p></div><div className="min-w-[120px]"><p className="whitespace-nowrap text-xs text-[#98a2b3]">付款时间</p><p className="mt-1 whitespace-nowrap text-sm font-semibold text-[#344054]">2026-07-12 12:00</p></div></div></div></section>
+          <section className="mb-7"><SectionTitle icon={FileText}>订单信息</SectionTitle><div className="rounded-xl border border-[#e7ebf2] bg-white p-4"><div className="flex flex-col gap-4 border-b border-[#edf0f4] pb-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs text-[#98a2b3]">班级名称</p><p className="mt-1 text-sm font-medium leading-6 text-[#344054]">【暑假】一年级信息学算法一期 · 上午小星星柏悦中心</p></div><div className="shrink-0 sm:text-right"><p className="text-xs text-[#98a2b3]">所购课次</p><p className="mt-1 text-sm font-semibold text-[#344054]">1–15</p></div></div><div className={`grid grid-cols-2 gap-x-4 gap-y-3 pt-4 text-sm ${orderInfoGridCols}`}><div><p className="text-xs text-[#98a2b3]">课程总价</p><p className="mt-1 font-semibold">¥ 3,150.00</p></div><div><p className="text-xs text-[#98a2b3]">优惠金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">-¥ {hasDiscount ? "1,575.00" : "0.00"}</p>{hasDiscount && <button onClick={() => setDetailView("discount")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看优惠说明"><CircleHelp size={15} /></button>}</div></div>{isCashPayment && <div><p className="text-xs text-[#98a2b3]">现金支付优惠</p><p className="mt-1 font-semibold text-[#d85b18]">-¥ {formatMoney(cashPaymentDiscountAmount)}</p></div>}<div><p className="text-xs text-[#98a2b3]">实付金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">¥ {hasDiscount ? "1,575.00" : formatMoney(actualPaidAmount)}</p><button onClick={() => setDetailView("paid")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看实付金额明细"><CircleHelp size={15} /></button></div></div><div><p className="text-xs text-[#98a2b3]">付款方式</p><p className="mt-1 font-semibold">{paymentMethod}</p></div><div className="min-w-[120px]"><p className="whitespace-nowrap text-xs text-[#98a2b3]">付款时间</p><p className="mt-1 whitespace-nowrap text-sm font-semibold text-[#344054]">2026-07-12 12:00</p></div></div></div></section>
 
               <section><SectionTitle icon={CreditCard}>{mode === "withdraw" ? "退课申请" : "退款申请"}</SectionTitle><div className="rounded-xl bg-[#f8fafc] p-4 sm:p-5">{mode === "withdraw" && <div className="mb-4 space-y-2"><span className="block text-sm font-medium text-[#344054]">退款原因</span><div className="relative"><select value={reason} onChange={(event) => setReason(event.target.value)} className="h-11 w-full appearance-none rounded-lg border border-[#e4e7ec] bg-white px-3 text-sm text-[#344054] outline-none transition focus:border-[#1668d8] focus:ring-4 focus:ring-[#1668d8]/10"><option value="" disabled>请选择退款原因</option><option>时间冲突</option><option>距离冲突</option><option>教师问题</option><option>课程问题</option><option>退费重报</option><option>业务办理错误</option><option>其他</option></select><ChevronDown className="pointer-events-none absolute right-3 top-3 text-[#667085]" size={17} /></div></div>}<div className="mb-6 space-y-2"><span className="block text-sm font-medium text-[#344054]">退款说明</span><textarea className="min-h-20 w-full resize-none rounded-lg border border-[#e4e7ec] bg-white px-3 py-3 text-sm outline-none transition placeholder:text-[#98a2b3] focus:border-[#1668d8] focus:ring-4 focus:ring-[#1668d8]/10" placeholder="请选择退款说明" /></div>
                 {mode === "withdraw" && <div><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold text-[#344054]">{withdrawLessonSelectionTitle}</p><p className="text-xs text-[#667085]">{selectedLessons.length ? `已选择 ${selectedLessons.length} 节` : withdrawLessonSelectionHint}</p></div><div className="grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-9">{lessons.map((lesson) => { const isSelected = selectedLessons.includes(lesson.id); const isCompleted = lesson.state === "completed"; const isRefunded = lesson.state === "refunded"; const isDisabled = withdrawSelectionMode === "range" ? isCompleted || isRefunded : isRefunded; return <button key={lesson.id} onClick={() => toggleWithdrawLesson(lesson.id)} disabled={isDisabled} className={`relative flex h-14 flex-col items-center justify-center rounded-lg text-sm font-semibold transition ${isDisabled ? "cursor-not-allowed bg-[#eaecf0] text-[#98a2b3]" : isSelected ? "bg-[#1668d8] text-white shadow-[0_6px_12px_rgba(22,104,216,0.18)]" : "bg-white text-[#475467] ring-1 ring-[#d0d5dd] hover:ring-[#1668d8] hover:text-[#1668d8]"}`}><span className="absolute top-1.5 text-[9px] font-medium opacity-80">{isCompleted ? "已下课" : isRefunded ? "已退" : isSelected ? "退课" : "可退"}</span><span className="mt-3">{lesson.id}</span>{isSelected && <Check className="absolute right-1.5 top-1.5" size={12} strokeWidth={3} />}</button>; })}</div></div>}
-                {mode === "refund" && <div className="space-y-4">
+                {showSpecialRefundForm && <div className="space-y-4">
                   <div>
                     <p className="mb-3 text-sm font-semibold text-[#344054]">选择特殊退费场景</p>
                     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -785,7 +1173,8 @@ export default function App() {
                     </div>
                   </div>}
                 </div>}
-                <div className="mt-5 flex flex-col gap-4 rounded-xl border border-[#f8d6bd] bg-[#fff4ec] p-4 sm:flex-row sm:items-start sm:justify-between">
+                {(mode === "withdraw" || showSpecialRefundForm) ? (
+                  <div className="mt-5 flex flex-col gap-4 rounded-xl border border-[#f8d6bd] bg-[#fff4ec] p-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-xs font-medium text-[#9a5d27]">本次退款金额</p>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -845,13 +1234,140 @@ export default function App() {
                       </div>
                     )}
                   </div>
+                ) : null}
               </div></section>
             </div>
 
-            <div className="flex justify-end border-t border-[#e7ebf2] bg-white px-6 py-4 sm:px-8"><div className="flex gap-3"><button onClick={closeDrawer} className="rounded-lg border border-[#cfe0ff] bg-white px-5 py-2.5 text-sm font-semibold text-[#165dff] transition hover:bg-[#eef4ff]">取消</button><button onClick={() => setConfirmed(true)} disabled={isConfirmDisabled} className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(22,93,255,0.2)] transition ${isConfirmDisabled ? "cursor-not-allowed bg-[#9ec1ff]" : "bg-[#165dff] hover:bg-[#0e42d2]"}`}>{confirmButtonText}</button></div></div>
+            {!(mode === "refund" && specialPanel === "applications") && (
+              <div className="flex justify-end border-t border-[#e7ebf2] bg-white px-6 py-4 sm:px-8">
+                <div className="flex gap-3">
+                  <button onClick={closeDrawer} className="rounded-lg border border-[#cfe0ff] bg-white px-5 py-2.5 text-sm font-semibold text-[#165dff] transition hover:bg-[#eef4ff]">取消</button>
+                  <button onClick={submitCurrentRefundApplication} disabled={isConfirmDisabled} className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(22,93,255,0.2)] transition ${isConfirmDisabled ? "cursor-not-allowed bg-[#9ec1ff]" : "bg-[#165dff] hover:bg-[#0e42d2]"}`}>{confirmButtonText}</button>
+                </div>
+              </div>
+            )}
             <AnimatePresence>{confirmed && <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-lg bg-[#101828] px-4 py-2 text-sm text-white shadow-xl">{successToastText}</motion.div>}</AnimatePresence>
           </motion.aside>
         </>}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {configPanel && (
+          <>
+            <motion.button
+              aria-label="关闭配置弹窗"
+              onClick={closeConfigPanel}
+              className="fixed inset-0 z-[55] cursor-default bg-[#101828]/45 backdrop-blur-[1px]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+            <motion.section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="config-panel-title"
+              className="fixed left-1/2 top-1/2 z-[65] w-[calc(100%-32px)] max-w-[980px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[28px] bg-white shadow-[0_20px_60px_rgba(16,24,40,0.22)]"
+              initial={{ opacity: 0, scale: 0.98, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, y: 8 }}
+            >
+              <header className="flex items-center justify-between border-b border-[#e5e9f0] px-6 py-4">
+                <div>
+                  <h2 id="config-panel-title" className="text-lg font-semibold text-[#1d2939]">
+                    {configPanel === "onlineRebate"
+                      ? "线上课返利金额配置"
+                      : configPanel === "cashDiscount"
+                        ? "现金支付优惠配置"
+                        : configPanel === "activity"
+                          ? "优惠活动配置"
+                          : "个人折扣配置"}
+                  </h2>
+                  <p className="mt-1 text-sm text-[#667085]">
+                    {configPanel === "onlineRebate"
+                      ? "按课次配置返利金额，退款时会直接读取当前设置。"
+                      : configPanel === "cashDiscount"
+                        ? "配置全局现金支付优惠金额，订单信息会自动联动。"
+                        : "当前仅保留入口，后续再补充内页功能。"}
+                  </p>
+                </div>
+                <button onClick={closeConfigPanel} className="rounded-sm p-1.5 text-[#667085] transition hover:bg-[#f2f4f7] hover:text-[#101828]" aria-label="关闭配置弹窗">
+                  <X size={20} />
+                </button>
+              </header>
+
+              <div className="max-h-[76vh] overflow-y-auto px-6 py-5">
+                {configPanel === "onlineRebate" && (
+                  <div className="space-y-5">
+                    <div className="rounded-xl border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm text-[#344054]">
+                      这里配置一个统一的线上课返利金额，后续所有线上课次退款时都会读取这个值。
+                    </div>
+                    <div className="rounded-2xl border border-[#e5e9f0] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-[#1d2939]">统一返利金额</p>
+                          <p className="mt-1 text-xs text-[#667085]">所有线上课次都会使用此金额</p>
+                        </div>
+                        <span className="rounded-full bg-[#eef4ff] px-2.5 py-1 text-[11px] font-medium text-[#165dff]">全局生效</span>
+                      </div>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        value={onlineRebateGlobalAmount}
+                        onChange={(event) => {
+                          const nextValue = Number(event.target.value);
+                          setOnlineRebateGlobalAmount(Number.isFinite(nextValue) && nextValue >= 0 ? nextValue : 0);
+                        }}
+                        className="mt-3 h-11 w-full rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm font-medium text-[#344054] outline-none transition focus:border-[#165dff] focus:ring-4 focus:ring-[#165dff]/10"
+                      />
+                    </div>
+                    <div className="rounded-xl border border-[#e5e9f0] bg-[#f8fafc] p-4 text-sm text-[#667085]">
+                      当前统一返利金额：<span className="font-semibold text-[#1d2939]">¥ {formatMoney(onlineRebateGlobalAmount)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {configPanel === "cashDiscount" && (
+                  <div className="space-y-5">
+                    <div className="rounded-xl border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm text-[#344054]">
+                      这里配置全局现金支付优惠金额，订单内现金支付优惠会自动读取该值。
+                    </div>
+                    <label className="block rounded-2xl border border-[#e5e9f0] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                      <span className="text-sm font-semibold text-[#1d2939]">现金支付优惠金额</span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        value={cashPaymentGlobalDiscount}
+                        onChange={(event) => {
+                          const nextValue = Number(event.target.value);
+                          setCashPaymentGlobalDiscount(Number.isFinite(nextValue) && nextValue >= 0 ? nextValue : 0);
+                        }}
+                        className="mt-2 h-11 w-full rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm font-medium text-[#344054] outline-none transition focus:border-[#165dff] focus:ring-4 focus:ring-[#165dff]/10"
+                      />
+                      <p className="mt-2 text-xs text-[#667085]">当前订单展示将随该配置实时更新。</p>
+                    </label>
+                  </div>
+                )}
+
+                {(configPanel === "activity" || configPanel === "personal") && (
+                  <div className="rounded-2xl border border-dashed border-[#dbe3ef] bg-[#f8fafc] p-8 text-center">
+                    <p className="text-base font-semibold text-[#1d2939]">内页暂未开发</p>
+                    <p className="mt-2 text-sm leading-6 text-[#667085]">当前仅保留入口，后续再补充对应的配置页面和规则逻辑。</p>
+                  </div>
+                )}
+              </div>
+
+              <footer className="flex justify-end gap-3 border-t border-[#e5e9f0] bg-white px-6 py-4">
+                <button onClick={closeConfigPanel} className="rounded-lg border border-[#cfe0ff] bg-white px-5 py-2.5 text-sm font-semibold text-[#165dff] transition hover:bg-[#eef4ff]">
+                  {configPanel === "activity" || configPanel === "personal" ? "知道了" : "完成配置"}
+                </button>
+              </footer>
+            </motion.section>
+          </>
+        )}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -1012,7 +1528,7 @@ export default function App() {
                   </div>
                 </div>
               </> : <>
-              {mode === "refund" && specialScenario === "custom_refund" && (
+              {showSpecialRefundForm && specialScenario === "custom_refund" && (
                 <div className="mb-5 space-y-4">
                     {hasDiscount && (
                       <div className="rounded-lg border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm">
@@ -1067,14 +1583,14 @@ export default function App() {
                                 {detailLessons.map((lesson) => {
                                   const refunded = lesson.state === "refunded";
                                   const isSelectedRefundLesson = specialScenario === "custom_refund" && customAllocationMode === "lesson" && specialSelectedLessonIds.includes(lesson.id);
-                                  const lessonStatus = lesson.state === "completed" ? "已下课" : isSelectedRefundLesson ? "本次退款" : refunded ? "已退款" : "未上课";
+                                  const lessonStatus = lesson.state === "completed" ? "已下课" : refunded ? "已退款" : "未上课";
                                   const lessonDiscount = getLessonDiscount(lesson);
                                   const lessonActualPaid = getCurrentLessonPaidAmount(lesson);
                                   const lessonConsumption = getCourseConsumption(lesson);
                                   const lessonRefundedAmountBefore = 0;
                                   const lessonRefundedAmountAfter = lessonRefundedAmountBefore + getSpecialLessonRefundableAmount(lesson);
                                   return (
-                                    <tr key={lesson.id} className={lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}>
+                                  <tr key={lesson.id} className={isSelectedRefundLesson ? "bg-[#FEF8F3]" : lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}>
                                       <td className="px-4 py-3 font-medium">第 {lesson.id} 课次</td>
                                       <td className="px-4 py-3">
                                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${lesson.state === "completed" ? "bg-[#f2f4f7] text-[#667085]" : isSelectedRefundLesson ? "bg-[#e8f1ff] text-[#165dff]" : refunded ? "bg-[#fff0ed] text-[#c84d3c]" : "bg-[#edf7f4] text-[#0b806f]"}`}>
@@ -1128,14 +1644,14 @@ export default function App() {
                                 {detailLessons.map((lesson) => {
                                   const refunded = lesson.state === "refunded";
                                   const isSelectedRefundLesson = specialScenario === "custom_refund" && customAllocationMode === "lesson" && specialSelectedLessonIds.includes(lesson.id);
-                                  const lessonStatus = lesson.state === "completed" ? "已下课" : isSelectedRefundLesson ? "本次退款" : refunded ? "已退款" : "未上课";
+                                  const lessonStatus = lesson.state === "completed" ? "已下课" : refunded ? "已退款" : "未上课";
                                   const lessonDiscount = getLessonDiscount(lesson);
                                   const lessonActualPaid = getCurrentLessonPaidAmount(lesson);
                                   const lessonConsumption = getCourseConsumption(lesson);
                                   const lessonRefundedAmountBefore = 0;
                                   const lessonRefundedAmountAfter = lessonRefundedAmountBefore + getSpecialLessonRefundableAmount(lesson);
                                   return (
-                                    <tr key={lesson.id} className={lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}>
+                                  <tr key={lesson.id} className={isSelectedRefundLesson ? "bg-[#FEF8F3]" : lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}>
                                       <td className="px-4 py-3 font-medium">第 {lesson.id} 课次</td>
                                       <td className="px-4 py-3">
                                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${lesson.state === "completed" ? "bg-[#f2f4f7] text-[#667085]" : isSelectedRefundLesson ? "bg-[#e8f1ff] text-[#165dff]" : refunded ? "bg-[#fff0ed] text-[#c84d3c]" : "bg-[#edf7f4] text-[#0b806f]"}`}>
@@ -1246,7 +1762,7 @@ export default function App() {
                             const refunded = lesson.state === "refunded";
                             const consumedAmount = getCourseConsumption(lesson);
                             const isSelectedRefundLesson = specialSelectedLessonIds.includes(lesson.id);
-                            const lessonStatus = lesson.state === "completed" ? "已下课" : isSelectedRefundLesson ? "本次退款" : refunded ? "已退款" : "未上课";
+                            const lessonStatus = lesson.state === "completed" ? "已下课" : refunded ? "已退款" : "未上课";
                             const lessonDiscount = getLessonDiscount(lesson);
                             const lessonActualPaid = ORIGINAL_PRICE - lessonDiscount;
                             const lessonRefundedAmount = refunded ? lessonActualPaid : 0;
@@ -1288,7 +1804,7 @@ export default function App() {
                   </> : null}
                 </div>
                 }
-                {mode === "refund" && specialScenario === "discount_diff" && <div className="mb-5 space-y-3 rounded-lg border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm">
+                {showSpecialRefundForm && specialScenario === "discount_diff" && <div className="mb-5 space-y-3 rounded-lg border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm">
                   <div className="flex gap-3">
                     <span className="w-20 shrink-0 text-[#667085]">优惠名称</span>
                     <span className="font-medium text-[#1d2939]">{activeSpecialDiscount.label}</span>
@@ -1308,12 +1824,12 @@ export default function App() {
                   </div>
                 </div>}
 
-                {mode === "refund" && hasDiscount && specialScenario !== "online_rebate" && specialScenario !== "high_end_half" && specialScenario !== "discount_diff" && specialScenario !== "custom_refund" && <div className="mb-5 space-y-3 rounded-lg border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm">
+                {showSpecialRefundForm && hasDiscount && specialScenario !== "online_rebate" && specialScenario !== "high_end_half" && specialScenario !== "discount_diff" && specialScenario !== "custom_refund" && <div className="mb-5 space-y-3 rounded-lg border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm">
                   <div className="flex gap-3"><span className="w-20 shrink-0 text-[#667085]">优惠名称</span><span className="font-medium text-[#1d2939]">{specialDiscount === "special_five_original" ? "特殊关系5折（按原价）" : "特殊关系5折（按优惠价）"}</span></div>
                   <div className="flex gap-3"><span className="w-20 shrink-0 text-[#667085]">优惠规则</span><span className="leading-6 text-[#344054]">{(() => { const discountRule = getDiscountRefundRuleText(activeSpecialDiscount); return (<><strong className="font-semibold text-[#165dff]">{discountRule.title}</strong>，{discountRule.description}</>); })()}</span></div>
                 </div>}
 
-                {mode === "refund" && showSingleLessonSelectionPrompt && (
+                {showSpecialRefundForm && showSingleLessonSelectionPrompt && (
                   <div className="mb-5">
                     <LessonSelectionEmptyState
                       description="选择课次后，这里会展示本次退费在各课次上的分摊结果"
@@ -1321,7 +1837,7 @@ export default function App() {
                   </div>
                 )}
 
-                {mode === "refund" && showDiscountDiffCourseTable && <div className="mb-5">
+                {showSpecialRefundForm && showDiscountDiffCourseTable && <div className="mb-5">
                   <p className="mb-3 text-sm font-semibold text-[#1d2939]">课次明细表</p>
                   <div className="overflow-x-auto rounded-lg border border-[#e5e9f0]">
                     <div className="max-h-[58vh] overflow-auto">
@@ -1377,7 +1893,7 @@ export default function App() {
                   </div>
                 </div>}
 
-                {mode === "refund" && showSpecialRefundCourseTable && <div className="mb-5">
+                {showSpecialRefundForm && showSpecialRefundCourseTable && <div className="mb-5">
                   <p className="mb-3 text-sm font-semibold text-[#1d2939]">课次明细表</p>
                   <div className="overflow-x-auto rounded-lg border border-[#e5e9f0]">
                     <div className="max-h-[58vh] overflow-auto">
@@ -1485,6 +2001,100 @@ export default function App() {
                   </div>
                 </div>}
 
+                {showRefundApplications && (
+                  <div className="space-y-4">
+                    <div className="rounded-xl border border-[#dbe5ff] bg-[#f5f8ff] p-4 sm:p-5">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-[15px] font-semibold text-[#1d2939]">待处理申请</p>
+                          <p className="mt-1 text-sm leading-6 text-[#667085]">这里汇总了财务特殊退费提交后的申请，包含待处理、已完成、已驳回三类状态，方便你快速查看流转结果。</p>
+                        </div>
+                        <button onClick={() => setSpecialPanel("form")} className="rounded-lg border border-[#cfe0ff] bg-white px-4 py-2 text-sm font-semibold text-[#165dff] transition hover:bg-[#eef4ff]">
+                          返回特殊退费
+                        </button>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 sm:grid-cols-4">
+                        {([
+                          { label: "全部申请", value: specialApplicationStatusCounts.all, color: "text-[#1d2939]" },
+                          { label: "待处理", value: specialApplicationStatusCounts.pending, color: "text-[#d97706]" },
+                          { label: "已完成", value: specialApplicationStatusCounts.completed, color: "text-[#15803d]" },
+                          { label: "已驳回", value: specialApplicationStatusCounts.rejected, color: "text-[#b42318]" },
+                        ] as const).map((item) => (
+                          <div key={item.label} className="rounded-xl bg-white px-4 py-3 ring-1 ring-[#dbe5ff]">
+                            <p className="text-xs font-medium text-[#667085]">{item.label}</p>
+                            <p className={`mt-1 text-2xl font-semibold ${item.color}`}>{item.value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {SPECIAL_APPLICATION_STATUS_OPTIONS.map((item) => {
+                          const active = specialApplicationStatus === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => setSpecialApplicationStatus(item.id)}
+                              className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${active ? "bg-[#165dff] text-white" : "bg-white text-[#344054] ring-1 ring-[#dbe5ff] hover:bg-[#eef4ff]"}`}
+                            >
+                              {item.label}
+                              {item.id !== "all" && <span className="ml-1 opacity-80">({specialApplicationStatusCounts[item.id]})</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-xl border border-[#e5e9f0] bg-white">
+                      <div className="flex items-center justify-between border-b border-[#edf0f4] px-4 py-3">
+                        <p className="text-sm font-semibold text-[#1d2939]">{specialApplicationStatus === "all" ? "全部申请" : `${SPECIAL_APPLICATION_STATUS_OPTIONS.find((item) => item.id === specialApplicationStatus)?.label}申请`}</p>
+                        <p className="text-xs text-[#667085]">共 {specialApplicationList.length} 条</p>
+                      </div>
+
+                      <div className="divide-y divide-[#edf0f4]">
+                        {specialApplicationList.length ? specialApplicationList.map((item) => {
+                          const statusClass =
+                            item.status === "pending"
+                              ? "bg-[#fff7ed] text-[#b54708]"
+                              : item.status === "completed"
+                                ? "bg-[#ecfdf3] text-[#027a48]"
+                                : "bg-[#fef3f2] text-[#b42318]";
+                          return (
+                            <div key={item.id} className="flex flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="text-sm font-semibold text-[#1d2939]">{item.scenarioLabel}</p>
+                                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClass}`}>
+                                    {item.status === "pending" ? "待处理" : item.status === "completed" ? "已完成" : "已驳回"}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#667085]">
+                                  <span>申请编号：{item.id}</span>
+                                  <span>申请人：{item.applicant}</span>
+                                  <span>办理校区：{item.campus}</span>
+                                  <span>退款方式：{item.refundMethod}</span>
+                                </div>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#667085]">
+                                  <span>提交时间：{item.submitTime}</span>
+                                  <span>申请金额：¥ {formatMoney(item.amount)}</span>
+                                  <span>关联场景：{getSpecialScenarioLabel(item.scenarioId)}</span>
+                                </div>
+                              </div>
+                              <div className="min-w-[200px] rounded-xl bg-[#f8fafc] px-4 py-3 text-sm text-[#344054]">
+                                {item.status === "pending" && <p>当前流转：等待财务复核与审批。</p>}
+                                {item.status === "completed" && <p>已完成于 {item.completedTime}，审批人 {item.approver}。</p>}
+                                {item.status === "rejected" && <p>已驳回于 {item.completedTime}，原因：{item.rejectReason}</p>}
+                              </div>
+                            </div>
+                          );
+                        }) : (
+                          <div className="px-4 py-10 text-center text-sm text-[#667085]">当前筛选条件下没有申请记录。</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {mode === "withdraw" && detailView === "withdrawRefund" && selectedLessons.length > 0 && <div className="mb-5 rounded-lg border border-[#f8d6bd] bg-[#fff8f2] p-4">
                   <p className="text-sm font-semibold text-[#7a431c]">本次退款计算</p>
                   {isOriginalPriceRefund ? <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3"><div><p className="text-[#9a6a47]">前7课次按原价收费</p><p className="mt-1 font-semibold text-[#5e3315]">7 × ¥210 = ¥{formatMoney(ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS * ORIGINAL_PRICE)}</p></div><div><p className="text-[#9a6a47]">第8课次按支付剩余金额收费</p><p className="mt-1 font-semibold text-[#5e3315]">¥{formatMoney(actualPaidAmount)} - ¥{formatMoney(ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS * ORIGINAL_PRICE)} = ¥{formatMoney(actualPaidAmount - ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS * ORIGINAL_PRICE)}</p></div><div><p className="text-[#9a6a47]">第9-15课次按0元收费</p><p className="mt-1 font-semibold text-[#5e3315]">¥0.00</p></div></div> : <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#5e3315]"><span>所选 {selectedLessons.length} 节</span><span className="text-[#c59b7c]">×</span><span>单课次实付金额 ¥105</span><span className="text-[#c59b7c]">=</span><strong className="text-[#d85b18]">退款 ¥{refundAmount.toLocaleString()}</strong></div>}
@@ -1515,7 +2125,7 @@ export default function App() {
                             const lessonActualPaid = ORIGINAL_PRICE - lessonDiscount;
                             const lessonRefundedAmount = refunded ? lessonActualPaid : 0;
                             const lessonRefundableAmount = Math.max(lessonActualPaid - consumedAmount - lessonRefundedAmount, 0);
-                            return <tr key={lesson.id} className={isSelectedRefundLesson ? "bg-[#eef4ff]" : lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}><td className="px-4 py-3 font-medium">第 {lesson.id} 课次</td><td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${lesson.state === "completed" ? "bg-[#f2f4f7] text-[#667085]" : isSelectedRefundLesson ? "bg-[#e8f1ff] text-[#165dff]" : refunded ? "bg-[#fff0ed] text-[#c84d3c]" : "bg-[#edf7f4] text-[#0b806f]"}`}>{lessonStatus}</span></td><td className="px-4 py-3">¥ 210.00</td><td className="px-4 py-3 text-[#d85b18]">-¥ {formatMoney(lessonDiscount)}</td>{detailView === "withdrawRefund" ? <>{isOriginalPriceRefund && <td className="px-4 py-3">¥ {formatMoney(lessonActualPaid)}</td>}<td className="px-4 py-3">¥ {formatMoney(consumedAmount)}</td><td className="px-4 py-3">¥ {formatMoney(lessonRefundedAmount)}</td><td className="px-4 py-3 font-medium text-[#165dff]">¥ {formatMoney(lessonRefundableAmount)}</td></> : <td className="px-4 py-3">¥ {formatMoney(lessonActualPaid)}</td>}</tr>;
+                            return <tr key={lesson.id} className={isSelectedRefundLesson ? "bg-[#FEF8F3]" : lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}><td className="px-4 py-3 font-medium">第 {lesson.id} 课次</td><td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${lesson.state === "completed" ? "bg-[#f2f4f7] text-[#667085]" : refunded ? "bg-[#fff0ed] text-[#c84d3c]" : "bg-[#edf7f4] text-[#0b806f]"}`}>{lessonStatus}</span></td><td className="px-4 py-3">¥ 210.00</td><td className="px-4 py-3 text-[#d85b18]">-¥ {formatMoney(lessonDiscount)}</td>{detailView === "withdrawRefund" ? <>{isOriginalPriceRefund && <td className="px-4 py-3">¥ {formatMoney(lessonActualPaid)}</td>}<td className="px-4 py-3">¥ {formatMoney(consumedAmount)}</td><td className="px-4 py-3">¥ {formatMoney(lessonRefundedAmount)}</td><td className="px-4 py-3 font-medium text-[#165dff]">¥ {formatMoney(lessonRefundableAmount)}</td></> : <td className="px-4 py-3">¥ {formatMoney(lessonActualPaid)}</td>}</tr>;
                           })}
                         </tbody>
                         <tfoot className="bg-[#fafbfc] text-[#1d2939]">
