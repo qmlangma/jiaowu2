@@ -152,8 +152,12 @@ export default function App() {
   const [customRefundAmount, setCustomRefundAmount] = useState("0");
   const [customAllocationMode, setCustomAllocationMode] = useState<"lesson" | "spread">("spread");
   const [withdrawSelectionMode, setWithdrawSelectionMode] = useState<WithdrawSelectionMode>("range");
+  const [currentDemoKind, setCurrentDemoKind] = useState<WithdrawDemoKind>("operations");
   const [withdrawSelectedLessonIds, setWithdrawSelectedLessonIds] = useState<number[]>([]);
   const [refundMethod, setRefundMethod] = useState("现金退款");
+  const [bankTransferAccountName, setBankTransferAccountName] = useState("");
+  const [bankTransferAccountNumber, setBankTransferAccountNumber] = useState("");
+  const [bankTransferBankName, setBankTransferBankName] = useState("");
   const [reason, setReason] = useState("");
   const [selectedStart, setSelectedStart] = useState<number | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -161,6 +165,8 @@ export default function App() {
   const isOriginalPriceRefund = scenario === "discount_original";
   const paymentMethod = hasDiscount ? "富友" : "现金支付";
   const isCashPayment = paymentMethod === "现金支付";
+  const cashPaymentDiscountAmount = isCashPayment ? 50 : 0;
+  const canEditRefundMethod = currentDemoKind === "finance";
 
   const selectedLessons =
     withdrawSelectionMode === "multi"
@@ -171,7 +177,12 @@ export default function App() {
   const onlineLessons = lessons.filter((lesson) => lesson.delivery === "online");
   const completedOnlineLessons = onlineLessons.filter((lesson) => lesson.state === "completed");
   const completedLessons = lessons.filter((lesson) => lesson.state === "completed");
-  const actualPaidAmount = hasDiscount ? 1575 : 3150;
+  const actualPaidAmount = hasDiscount ? 1575 : 3150 - cashPaymentDiscountAmount;
+  const orderInfoGridCols = isCashPayment ? "sm:grid-cols-6" : "sm:grid-cols-5";
+  const specialScenarioLessons =
+    specialScenario === "online_rebate"
+      ? lessons.map((lesson) => (lesson.id >= 4 ? { ...lesson, delivery: "online" as LessonDelivery } : lesson))
+      : lessons;
   const getCurrentLessonPaidAmount = (lesson: { id: number; state: LessonState }) => {
     if (isOriginalPriceRefund) return getOriginalPriceRefundLessonPaid(lesson.id);
     if (hasDiscount) return 105;
@@ -195,11 +206,12 @@ export default function App() {
   const isDiscountDetail = detailView === "discount";
   const activeSpecialDiscount = DISCOUNT_OPTIONS.find((option) => option.id === specialDiscount) ?? DISCOUNT_OPTIONS[0];
   const customRefundAmountNumber = Number(customRefundAmount) || 0;
-  const specialSelectedLessons = lessons.filter((lesson) => specialSelectedLessonIds.includes(lesson.id));
+  const specialSelectedLessons = specialScenarioLessons.filter((lesson) => specialSelectedLessonIds.includes(lesson.id));
   const specialSelectionLessons = lessons;
-  const specialSelectedDetailLessons = specialSelectedLessonIds.length ? detailLessons.filter((lesson) => specialSelectedLessonIds.includes(lesson.id)) : [];
-  const specialVisibleDetailLessons = showAllLessonRows || !specialSelectedLessonIds.length ? detailLessons : specialSelectedDetailLessons;
-  const specialRefundSummaryLessons = specialSelectedLessonIds.length ? specialSelectedDetailLessons : detailLessons;
+  const specialDetailLessons = specialScenarioLessons;
+  const specialSelectedDetailLessons = specialSelectedLessonIds.length ? specialDetailLessons.filter((lesson) => specialSelectedLessonIds.includes(lesson.id)) : [];
+  const specialVisibleDetailLessons = showAllLessonRows || !specialSelectedLessonIds.length ? specialDetailLessons : specialSelectedDetailLessons;
+  const specialRefundSummaryLessons = specialSelectedLessonIds.length ? specialSelectedDetailLessons : specialDetailLessons;
   const customSelectedCapacity = specialSelectedLessons.reduce((sum, lesson) => sum + getCurrentLessonPaidAmount(lesson), 0);
   const customRefundNeedsMoreLessons =
     specialScenario === "custom_refund" &&
@@ -273,7 +285,7 @@ export default function App() {
     if (specialScenario === "custom_refund" && customAllocationMode === "lesson") {
       return customSelectedCapacity;
     }
-    return lessons.reduce((sum, lesson) => sum + getSpecialLessonRefundableAmountForMax(lesson), 0);
+    return specialScenarioLessons.reduce((sum, lesson) => sum + getSpecialLessonRefundableAmountForMax(lesson), 0);
   }
 
   function getSpecialLessonRefundableAmountForMax(lesson: { id: number; state: LessonState; delivery: LessonDelivery }) {
@@ -296,11 +308,11 @@ export default function App() {
   const specialRefundAmount = (() => {
     switch (specialScenario) {
       case "online_rebate":
-        return lessons.reduce((sum, lesson) => sum + getSpecialLessonRemainingRefundAmount(lesson), 0);
+        return specialScenarioLessons.reduce((sum, lesson) => sum + getSpecialLessonRemainingRefundAmount(lesson), 0);
       case "high_end_half":
         return completedLessons.length * (ORIGINAL_PRICE / 2);
       case "discount_diff":
-        return lessons.reduce((sum, lesson) => sum + getLessonCurrentDiscount(lesson) - getLessonOriginalDiscount(lesson), 0);
+        return specialScenarioLessons.reduce((sum, lesson) => sum + getLessonCurrentDiscount(lesson) - getLessonOriginalDiscount(lesson), 0);
       case "single_lesson":
         return specialSelectedLessons.reduce((sum, lesson) => sum + getCurrentLessonPaidAmount(lesson), 0);
       case "custom_refund":
@@ -333,7 +345,7 @@ export default function App() {
   const isFinanceSingleLessonWithdraw = mode === "withdraw" && withdrawSelectionMode === "multi";
   const withdrawLessonSelectionTitle = isFinanceSingleLessonWithdraw ? "选择要退的课次（支持多选）" : "选择要退的课次";
   const withdrawLessonSelectionHint = isFinanceSingleLessonWithdraw ? "已下课课次也可选" : "请选择起始课次";
-  const specialRefundableLessonCount = lessons.filter((lesson) => getSpecialLessonRemainingRefundAmount(lesson) > 0).length;
+  const specialRefundableLessonCount = specialScenarioLessons.filter((lesson) => getSpecialLessonRemainingRefundAmount(lesson) > 0).length;
   const specialRefundSummaryText = (() => {
     switch (specialScenario) {
       case "online_rebate":
@@ -451,11 +463,19 @@ export default function App() {
     setDiscountDropdownOpen(false);
     setWithdrawSelectionMode("range");
     setWithdrawSelectedLessonIds([]);
+    setCurrentDemoKind("operations");
+    setBankTransferAccountName("");
+    setBankTransferAccountNumber("");
+    setBankTransferBankName("");
   };
 
-  const openWithdrawDemo = (nextScenario: DemoScenario, selectionMode: WithdrawSelectionMode) => {
+  const openWithdrawDemo = (nextScenario: DemoScenario, selectionMode: WithdrawSelectionMode, demoKind: WithdrawDemoKind) => {
     setScenario(nextScenario);
     setRefundMethod(nextScenario === "standard" ? "现金退款" : "原路退回");
+    setCurrentDemoKind(demoKind);
+    setBankTransferAccountName("");
+    setBankTransferAccountNumber("");
+    setBankTransferBankName("");
     setSelectedStart(null);
     setWithdrawSelectedLessonIds([]);
     setDetailView(null);
@@ -473,6 +493,10 @@ export default function App() {
   const openSpecialRefundDemo = (nextScenario: DemoScenario) => {
     setScenario(nextScenario);
     setRefundMethod(nextScenario === "standard" ? "现金退款" : "原路退回");
+    setCurrentDemoKind("finance");
+    setBankTransferAccountName("");
+    setBankTransferAccountNumber("");
+    setBankTransferBankName("");
     setMode("refund");
     setDetailView(null);
     setShowAllLessonRows(false);
@@ -530,7 +554,7 @@ export default function App() {
               {WITHDRAW_DEMO_CASES.filter((item) => item.kind === "operations").map((item) => (
                 <button
                   key={`operations-${item.scenario}`}
-                  onClick={() => openWithdrawDemo(item.scenario, "range")}
+                  onClick={() => openWithdrawDemo(item.scenario, "range", item.kind)}
                   className="group flex w-full items-center justify-between rounded-[20px] border border-[#e5e9f0] bg-white px-4 py-4 text-left text-[15px] font-medium text-[#344054] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-[#cbd5e1] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] hover:text-[#165dff] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff] sm:px-5 sm:py-5"
                 >
                   <span className="max-w-[calc(100%-32px)] leading-6">{item.label}</span>
@@ -551,7 +575,7 @@ export default function App() {
               {WITHDRAW_DEMO_CASES.filter((item) => item.kind === "finance").map((item) => (
                 <button
                   key={`finance-${item.scenario}`}
-                  onClick={() => openWithdrawDemo(item.scenario, "multi")}
+                  onClick={() => openWithdrawDemo(item.scenario, "multi", item.kind)}
                   className="group flex w-full items-center justify-between rounded-[20px] border border-[#e5e9f0] bg-white px-4 py-4 text-left text-[15px] font-medium text-[#344054] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-[#cbd5e1] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] hover:text-[#165dff] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff] sm:px-5 sm:py-5"
                 >
                   <span className="max-w-[calc(100%-32px)] leading-6">{item.label}</span>
@@ -614,7 +638,7 @@ export default function App() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8">
-          <section className="mb-7"><SectionTitle icon={FileText}>订单信息</SectionTitle><div className="rounded-xl border border-[#e7ebf2] bg-white p-4"><div className="flex flex-col gap-4 border-b border-[#edf0f4] pb-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs text-[#98a2b3]">班级名称</p><p className="mt-1 text-sm font-medium leading-6 text-[#344054]">【暑假】一年级信息学算法一期 · 上午小星星柏悦中心</p></div><div className="shrink-0 sm:text-right"><p className="text-xs text-[#98a2b3]">所购课次</p><p className="mt-1 text-sm font-semibold text-[#344054]">1–15</p></div></div><div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-4 text-sm sm:grid-cols-6"><div><p className="text-xs text-[#98a2b3]">课程总价</p><p className="mt-1 font-semibold">¥ 3,150.00</p></div><div><p className="text-xs text-[#98a2b3]">教材费</p><p className="mt-1 font-semibold">¥ 0.00</p></div><div><p className="text-xs text-[#98a2b3]">优惠金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">¥ {hasDiscount ? "1,575.00" : "0.00"}</p>{hasDiscount && <button onClick={() => setDetailView("discount")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看优惠说明"><CircleHelp size={15} /></button>}</div></div><div><p className="text-xs text-[#98a2b3]">实付金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">¥ {hasDiscount ? "1,575.00" : "3,150.00"}</p><button onClick={() => setDetailView("paid")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看实付金额明细"><CircleHelp size={15} /></button></div></div><div><p className="text-xs text-[#98a2b3]">付款方式</p><p className="mt-1 font-semibold">{paymentMethod}</p></div><div className="min-w-[120px]"><p className="whitespace-nowrap text-xs text-[#98a2b3]">付款时间</p><p className="mt-1 whitespace-nowrap text-sm font-semibold text-[#344054]">2026-07-12 12:00</p></div></div></div></section>
+          <section className="mb-7"><SectionTitle icon={FileText}>订单信息</SectionTitle><div className="rounded-xl border border-[#e7ebf2] bg-white p-4"><div className="flex flex-col gap-4 border-b border-[#edf0f4] pb-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs text-[#98a2b3]">班级名称</p><p className="mt-1 text-sm font-medium leading-6 text-[#344054]">【暑假】一年级信息学算法一期 · 上午小星星柏悦中心</p></div><div className="shrink-0 sm:text-right"><p className="text-xs text-[#98a2b3]">所购课次</p><p className="mt-1 text-sm font-semibold text-[#344054]">1–15</p></div></div><div className={`grid grid-cols-2 gap-x-4 gap-y-3 pt-4 text-sm ${orderInfoGridCols}`}><div><p className="text-xs text-[#98a2b3]">课程总价</p><p className="mt-1 font-semibold">¥ 3,150.00</p></div><div><p className="text-xs text-[#98a2b3]">优惠金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">-¥ {hasDiscount ? "1,575.00" : "0.00"}</p>{hasDiscount && <button onClick={() => setDetailView("discount")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看优惠说明"><CircleHelp size={15} /></button>}</div></div>{isCashPayment && <div><p className="text-xs text-[#98a2b3]">现金支付优惠</p><p className="mt-1 font-semibold text-[#d85b18]">-¥ 50.00</p></div>}<div><p className="text-xs text-[#98a2b3]">实付金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">¥ {hasDiscount ? "1,575.00" : formatMoney(actualPaidAmount)}</p><button onClick={() => setDetailView("paid")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看实付金额明细"><CircleHelp size={15} /></button></div></div><div><p className="text-xs text-[#98a2b3]">付款方式</p><p className="mt-1 font-semibold">{paymentMethod}</p></div><div className="min-w-[120px]"><p className="whitespace-nowrap text-xs text-[#98a2b3]">付款时间</p><p className="mt-1 whitespace-nowrap text-sm font-semibold text-[#344054]">2026-07-12 12:00</p></div></div></div></section>
 
               <section><SectionTitle icon={CreditCard}>{mode === "withdraw" ? "退课申请" : "退款申请"}</SectionTitle><div className="rounded-xl bg-[#f8fafc] p-4 sm:p-5">{mode === "withdraw" && <div className="mb-4 space-y-2"><span className="block text-sm font-medium text-[#344054]">退款原因</span><div className="relative"><select value={reason} onChange={(event) => setReason(event.target.value)} className="h-11 w-full appearance-none rounded-lg border border-[#e4e7ec] bg-white px-3 text-sm text-[#344054] outline-none transition focus:border-[#1668d8] focus:ring-4 focus:ring-[#1668d8]/10"><option value="" disabled>请选择退款原因</option><option>时间冲突</option><option>距离冲突</option><option>教师问题</option><option>课程问题</option><option>退费重报</option><option>业务办理错误</option><option>其他</option></select><ChevronDown className="pointer-events-none absolute right-3 top-3 text-[#667085]" size={17} /></div></div>}<div className="mb-6 space-y-2"><span className="block text-sm font-medium text-[#344054]">退款说明</span><textarea className="min-h-20 w-full resize-none rounded-lg border border-[#e4e7ec] bg-white px-3 py-3 text-sm outline-none transition placeholder:text-[#98a2b3] focus:border-[#1668d8] focus:ring-4 focus:ring-[#1668d8]/10" placeholder="请选择退款说明" /></div>
                 {mode === "withdraw" && <div><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold text-[#344054]">{withdrawLessonSelectionTitle}</p><p className="text-xs text-[#667085]">{selectedLessons.length ? `已选择 ${selectedLessons.length} 节` : withdrawLessonSelectionHint}</p></div><div className="grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-9">{lessons.map((lesson) => { const isSelected = selectedLessons.includes(lesson.id); const isCompleted = lesson.state === "completed"; const isRefunded = lesson.state === "refunded"; const isDisabled = withdrawSelectionMode === "range" ? isCompleted || isRefunded : isRefunded; return <button key={lesson.id} onClick={() => toggleWithdrawLesson(lesson.id)} disabled={isDisabled} className={`relative flex h-14 flex-col items-center justify-center rounded-lg text-sm font-semibold transition ${isDisabled ? "cursor-not-allowed bg-[#eaecf0] text-[#98a2b3]" : isSelected ? "bg-[#1668d8] text-white shadow-[0_6px_12px_rgba(22,104,216,0.18)]" : "bg-white text-[#475467] ring-1 ring-[#d0d5dd] hover:ring-[#1668d8] hover:text-[#1668d8]"}`}><span className="absolute top-1.5 text-[9px] font-medium opacity-80">{isCompleted ? "已下课" : isRefunded ? "已退" : isSelected ? "退课" : "可退"}</span><span className="mt-3">{lesson.id}</span>{isSelected && <Check className="absolute right-1.5 top-1.5" size={12} strokeWidth={3} />}</button>; })}</div></div>}
@@ -775,12 +799,13 @@ export default function App() {
                       <div>
                         <p className="mb-1.5 text-xs font-medium text-[#9a5d27]">退款方式</p>
                         <div className="group relative">
-                          <select disabled={isCashPayment} value={refundMethod} onChange={(event) => setRefundMethod(event.target.value)} className={`h-10 w-full appearance-none rounded-lg bg-white px-3 text-sm font-medium ring-1 ring-[#f1d8c7] ${isCashPayment ? "cursor-not-allowed text-[#667085]" : "cursor-pointer text-[#344054]"}`}>
+                          <select disabled={!canEditRefundMethod} value={refundMethod} onChange={(event) => setRefundMethod(event.target.value)} className={`h-10 w-full appearance-none rounded-lg bg-white px-3 text-sm font-medium ring-1 ring-[#f1d8c7] ${canEditRefundMethod ? "cursor-pointer text-[#344054]" : "cursor-not-allowed text-[#667085]"}`}>
                             <option>原路退回</option>
                             <option>现金退款</option>
+                            <option>银行转账</option>
                           </select>
                           <ChevronDown className="pointer-events-none absolute right-3 top-3 text-[#667085]" size={16} />
-                          {isCashPayment && <div role="tooltip" className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-10 w-max -translate-x-1/2 rounded-md bg-[#344054] px-2.5 py-1.5 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">现金支付订单仅支持现金退款<span className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-[#344054]" /></div>}
+                          {!canEditRefundMethod && <div role="tooltip" className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-10 w-max -translate-x-1/2 rounded-md bg-[#344054] px-2.5 py-1.5 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">运营人员不可修改退款方式<span className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-[#344054]" /></div>}
                         </div>
                       </div>
                       <div>
@@ -788,6 +813,37 @@ export default function App() {
                         <button className="flex w-full items-center justify-between gap-5 rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-[#344054] ring-1 ring-[#f1d8c7]">五里墩校区 <ChevronDown size={16} /></button>
                       </div>
                     </div>
+                    {refundMethod === "银行转账" && (
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div>
+                          <p className="mb-1.5 text-xs font-medium text-[#9a5d27]">户名</p>
+                          <input
+                            value={bankTransferAccountName}
+                            onChange={(event) => setBankTransferAccountName(event.target.value)}
+                            className="h-10 w-full rounded-lg border border-[#f1d8c7] bg-white px-3 text-sm text-[#344054] outline-none placeholder:text-[#98a2b3]"
+                            placeholder="请输入户名"
+                          />
+                        </div>
+                        <div>
+                          <p className="mb-1.5 text-xs font-medium text-[#9a5d27]">卡号</p>
+                          <input
+                            value={bankTransferAccountNumber}
+                            onChange={(event) => setBankTransferAccountNumber(event.target.value)}
+                            className="h-10 w-full rounded-lg border border-[#f1d8c7] bg-white px-3 text-sm text-[#344054] outline-none placeholder:text-[#98a2b3]"
+                            placeholder="请输入卡号"
+                          />
+                        </div>
+                        <div>
+                          <p className="mb-1.5 text-xs font-medium text-[#9a5d27]">开户行</p>
+                          <input
+                            value={bankTransferBankName}
+                            onChange={(event) => setBankTransferBankName(event.target.value)}
+                            className="h-10 w-full rounded-lg border border-[#f1d8c7] bg-white px-3 text-sm text-[#344054] outline-none placeholder:text-[#98a2b3]"
+                            placeholder="请输入开户行"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
               </div></section>
             </div>
@@ -1339,6 +1395,17 @@ export default function App() {
                                       </span>
                                       <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 w-[260px] -translate-x-1/2 rounded-md bg-[#344054] px-3 py-2 text-xs leading-5 text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                                         {REFUND_AMOUNT_HELP_TEXT}
+                                        <span className="absolute -top-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-[#344054]" />
+                                      </span>
+                                    </>
+                                  )}
+                                  {title === "剩余可返利金额" && (
+                                    <>
+                                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[#165dff]">
+                                        <CircleHelp size={15} />
+                                      </span>
+                                      <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 w-[330px] -translate-x-1/2 rounded-md bg-[#344054] px-3 py-2 text-xs leading-5 text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                                        配置的可返利金额按照优惠价等比例折算。如配置可返利30元，课次原价210，用户使用了5折券，则可返利金额为15元。
                                         <span className="absolute -top-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-[#344054]" />
                                       </span>
                                     </>
