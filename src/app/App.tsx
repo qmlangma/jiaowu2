@@ -1,5 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { PromotionActivityPage } from "./components/PromotionActivityPage";
+import { DiscountRuleDetailsPage, StudentDiscountPage } from "./components/StudentDiscountPage";
+import { RefundApprovalTablePageV3 } from "./components/RefundApprovalTablePage";
 import {
   Check,
   ChevronDown,
@@ -389,7 +392,8 @@ function RefundApprovalPage({
 }
 
 export default function App() {
-  const [activePage, setActivePage] = useState<"home" | "analysis" | "approval">("home");
+  const [activePage, setActivePage] = useState<"home" | "analysis" | "approval" | "activity" | "personalDiscount" | "discountRules">("home");
+  const [studentDiscountRuleId, setStudentDiscountRuleId] = useState<number | null>(null);
   const [approvalTab, setApprovalTab] = useState<ApprovalPageTab>("pending");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [configPanel, setConfigPanel] = useState<ConfigPanel>(null);
@@ -874,13 +878,26 @@ export default function App() {
 
   if (activePage === "approval") {
     return (
-      <RefundApprovalPage
+      <RefundApprovalTablePageV3
         applications={specialApplications}
         activeTab={approvalTab}
         onBack={() => setActivePage("home")}
         onChangeTab={setApprovalTab}
+        onUpdateStatus={(id, status, reason) => setSpecialApplications((current) => current.map((item) => item.id === id ? { ...item, status, rejectReason: reason || item.rejectReason, completedTime: new Date().toISOString().slice(0, 16).replace("T", " "), approver: "财务主管" } : item))}
       />
     );
+  }
+
+  if (activePage === "activity") {
+    return <PromotionActivityPage onBack={() => setActivePage("home")} />;
+  }
+
+  if (activePage === "personalDiscount") {
+    return <StudentDiscountPage initialRuleId={studentDiscountRuleId} onBack={() => { setStudentDiscountRuleId(null); setActivePage("home"); }} onOpenRules={() => { setStudentDiscountRuleId(null); setActivePage("discountRules"); }} />;
+  }
+
+  if (activePage === "discountRules") {
+    return <DiscountRuleDetailsPage onBack={() => { setStudentDiscountRuleId(null); setActivePage("personalDiscount"); }} onOpenStudentRule={(ruleId) => { setStudentDiscountRuleId(ruleId); setActivePage("personalDiscount"); }} />;
   }
 
   return (
@@ -914,12 +931,12 @@ export default function App() {
                   {
                     title: "优惠活动配置",
                     description: "用于维护优惠活动规则，当前仅保留入口。",
-                    onClick: () => openConfigPanel("activity"),
+                    onClick: () => setActivePage("activity"),
                   },
                   {
                     title: "个人折扣配置",
                     description: "用于维护个人折扣规则，当前仅保留入口。",
-                    onClick: () => openConfigPanel("personal"),
+                    onClick: () => setActivePage("personalDiscount"),
                   },
                 ].map((item) => (
                   <button

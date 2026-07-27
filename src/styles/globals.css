@@ -1,0 +1,17 @@
+/* 优惠活动列表：移除旧版序号列，给停用操作使用警示色。 */
+[class~="min-w-[1500px]"] th:nth-child(2),
+[class~="min-w-[1500px]"] td:nth-child(2) {
+  display: none;
+}
+
+[class~="min-w-[1500px]"] td:nth-child(3) button:nth-child(2) {
+  color: #f04438;
+}
+
+.promotion-drawer-content > * {
+  order: 4;
+}
+
+.promotion-drawer-content > .order-1 { order: 1; }
+.promotion-drawer-content > .order-2 { order: 2; }
+.promotion-drawer-content > .order-3 { order: 3; }
