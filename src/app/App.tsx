@@ -416,6 +416,10 @@ export default function App() {
   const [specialApplicationStatus, setSpecialApplicationStatus] = useState<"all" | SpecialApplicationStatus>("all");
 
   const openNewPage = (page: "prd" | "analysis") => {
+    if (page === "prd") {
+      window.open("https://alidocs.dingtalk.com/i/nodes/lyQod3RxJK3Xg3OxTojA2xrLJkb4Mw9r?utm_scene=person_space", "_blank", "noopener,noreferrer");
+      return;
+    }
     const url = new URL(window.location.href);
     url.search = "";
     url.searchParams.set("page", page);
