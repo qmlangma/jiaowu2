@@ -18,6 +18,8 @@ type ApprovalApplication = {
   approver?: string;
   completedTime?: string;
   rejectReason?: string;
+  batchOrderCount?: number;
+  batchFailedCount?: number;
 };
 
 const tabs: { id: ApprovalStatus; label: string }[] = [
@@ -294,6 +296,50 @@ export function RefundApprovalTablePageV2({ applications, activeTab, onBack, onC
   const refundMethods = Array.from(new Set(applications.map((item) => item.refundMethod)));
   const campuses = Array.from(new Set(applications.map((item) => item.campus)));
   const filteredApplications = useMemo(() => applications.map((item, index) => ({ item, index, detail: getStudentDetails(item, index) })).filter(({ item, detail }) => item.status === activeTab && (!applicationSearch.trim() || item.id.includes(applicationSearch.trim())) && (!studentSearch.trim() || `${detail.name}${detail.studentNo}${detail.phone}`.includes(studentSearch.trim())) && (!teacherSearch.trim() || detail.teacher.includes(teacherSearch.trim())) && (typeFilter === "all" || detail.type === typeFilter) && (scenarioFilter === "all" || item.scenarioId === scenarioFilter || detail.sceneLabel === scenarioFilter) && (refundMethodFilter === "all" || item.refundMethod === refundMethodFilter) && (campusFilter === "all" || item.campus === campusFilter) && (yearFilter === "all" || detail.year === yearFilter) && (quarterFilter === "all" || detail.quarter === quarterFilter) && (gradeFilter === "all" || detail.grade === gradeFilter) && (subjectFilter === "all" || detail.subject === subjectFilter)), [applications, activeTab, applicationSearch, studentSearch, teacherSearch, typeFilter, scenarioFilter, refundMethodFilter, campusFilter, yearFilter, quarterFilter, gradeFilter, subjectFilter]);
+  useEffect(() => {
+    const main = document.querySelector("main");
+    const table = main?.querySelector("table");
+    const filterBar = main?.querySelector("section > div:nth-child(2)");
+    const header = main?.querySelector("header");
+    if (!main || !table || !filterBar || !header || activeTab !== "pending") return;
+    const toolbar = document.createElement("div");
+    toolbar.className = "flex items-center gap-2 border-b border-[#edf0f4] bg-white px-4 py-3";
+    const count = document.createElement("span");
+    count.className = "mr-2 text-sm text-[#667085]";
+    count.textContent = selectedIds.length ? `已选 ${selectedIds.length} 条` : "请选择待处理申请";
+    toolbar.appendChild(count);
+    const makeButton = (label: string, color: string, action: () => void) => {
+      const button = document.createElement("button");
+      button.textContent = label;
+      button.className = `rounded-lg px-3 py-1.5 text-sm font-semibold ${color}`;
+      button.onclick = action;
+      toolbar.appendChild(button);
+    };
+    makeButton("全选当前筛选", "border border-[#dbe3ef] text-[#475467]", () => setSelectedIds(pendingVisibleIds));
+    makeButton("批量通过", "bg-[#027a48] text-white", () => {
+      if (!selectedIds.length) return;
+      if (window.confirm(`确认批量通过 ${selectedIds.length} 条退款申请吗？`)) onBatchUpdateStatus(selectedIds, "completed");
+    });
+    makeButton("批量驳回", "bg-[#d92d20] text-white", () => {
+      if (!selectedIds.length) return;
+      const reason = window.prompt("请输入批量驳回原因");
+      if (reason?.trim()) onBatchUpdateStatus(selectedIds, "rejected", reason.trim());
+    });
+    filterBar.insertAdjacentElement("afterend", toolbar);
+    const rows = Array.from(table.querySelectorAll("tbody tr"));
+    rows.forEach((row) => {
+      const id = row.querySelector("td button")?.textContent?.trim();
+      const cell = row.querySelector("td");
+      if (!id || !cell) return;
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = selectedIds.includes(id);
+      checkbox.className = "mr-3 size-4 align-middle accent-[#165dff]";
+      checkbox.onchange = () => setSelectedIds((current) => checkbox.checked ? [...new Set([...current, id])] : current.filter((item) => item !== id));
+      cell.prepend(checkbox);
+    });
+    return () => { toolbar.remove(); rows.forEach((row) => row.querySelector("input[type='checkbox']")?.remove()); };
+  }, [activeTab, filtered, pendingVisibleIds.join(","), selectedIds.join(",")]);
   const headers = ["申请编号", "学员信息", "申请类型", "退课/退费场景", "退款金额", "退款方式", "申请说明", "退课课次", "关联班级", "办理校区", "申请人", "申请时间", ...(rejectedTab ? ["驳回原因", "驳回时间", "驳回人姓名"] : []), "操作"];
   return <main className="min-h-screen bg-[#f5f7fb] px-2 py-5 text-[#182230] sm:px-3 lg:px-4"><div className="mx-auto max-w-[1900px] space-y-4"><header className="flex items-center justify-between rounded-2xl border border-[#e5e9f0] bg-white px-5 py-4 shadow-sm"><h1 className="text-2xl font-semibold text-[#1d2939]">财务退款审批</h1><button onClick={onBack} className="rounded-lg border border-[#dbe3ef] px-4 py-2 text-sm font-semibold text-[#667085] hover:bg-[#f8fafc]">返回首页</button></header><section className="overflow-hidden rounded-2xl border border-[#e5e9f0] bg-white shadow-sm"><div className="flex items-center gap-6 border-b border-[#e5e9f0] px-5 pt-2">{tabs.map((tab) => <button key={tab.id} onClick={() => onChangeTab(tab.id)} className={`border-b-2 px-1 py-4 text-sm font-semibold ${activeTab === tab.id ? "border-[#165dff] text-[#165dff]" : "border-transparent text-[#667085]"}`}>{tab.label}<span className="ml-1 text-xs">({tabCounts[tab.id]})</span></button>)}</div><div className="flex flex-wrap gap-3 border-b border-[#edf0f4] bg-[#fbfcff] p-4"><div className="relative"><Search size={16} className="pointer-events-none absolute left-3 top-3 text-[#98a2b3]" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索申请编号、姓名、学号、手机号" className="h-10 w-72 rounded-lg border border-[#dbe3ef] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#165dff]" /></div><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm text-[#344054]"><option value="all">全部类型</option><option value="特殊退课">特殊退课</option><option value="特殊退费">特殊退费</option></select><select value={scenarioFilter} onChange={(event) => setScenarioFilter(event.target.value)} className="h-10 min-w-44 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm text-[#344054]"><option value="all">全部退课/退费场景</option>{scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.label}</option>)}</select><select value={refundMethodFilter} onChange={(event) => setRefundMethodFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm text-[#344054]"><option value="all">全部退款方式</option>{refundMethods.map((method) => <option key={method}>{method}</option>)}</select><select value={campusFilter} onChange={(event) => setCampusFilter(event.target.value)} className="h-10 min-w-36 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm text-[#344054]"><option value="all">全部办理校区</option>{campuses.map((campus) => <option key={campus}>{campus}</option>)}</select><span className="ml-auto self-center text-sm text-[#667085]">共 {filteredApplications.length} 条</span></div><div className="overflow-x-auto"><table className="min-w-[2400px] w-full border-collapse text-sm"><thead className="bg-[#f8fafc] text-left text-[#667085]"><tr>{headers.map((title) => <th key={title} className={`whitespace-nowrap border-b border-[#e5e9f0] px-4 py-3 font-medium ${title === "学员信息" ? "sticky left-[150px] z-20 bg-[#f8fafc]" : ""}`}>{title}</th>)}</tr></thead><tbody>{filteredApplications.map(({ item, index, detail }) => <tr key={item.id} className="border-b border-[#edf0f4] align-top hover:bg-[#fbfcff]"><td className="w-[150px] whitespace-nowrap px-4 py-5"><button onClick={() => setDetailItem({ item, index })} className="font-medium text-[#165dff] hover:underline">{item.id}</button></td><td className="sticky left-[150px] z-10 whitespace-nowrap bg-white px-4 py-5 shadow-[4px_0_8px_rgba(15,23,42,0.04)]"><div className="font-medium text-[#344054]">{detail.name}</div><div className="mt-1 text-xs text-[#667085]">{detail.studentNo}</div><div className="mt-1 text-xs text-[#667085]">{detail.phone}</div></td><td className="px-4 py-5 text-[#344054]">{detail.type}</td><td className="whitespace-nowrap px-4 py-5 text-[#344054]">{detail.sceneLabel}</td><td className="whitespace-nowrap px-4 py-5"><button onClick={() => setAmountItem(item)} className="group inline-flex items-center gap-1 font-semibold text-[#d85b18] hover:underline">¥ {formatMoney(item.amount)}<span className="relative inline-flex"><CircleHelp size={15} className="text-[#98a2b3]" /><span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-44 -translate-x-1/2 rounded-md bg-[#344054] px-2 py-1 text-xs font-normal text-white opacity-0 transition-opacity group-hover:opacity-100">点击查看退款明细</span></span></button></td><td className="whitespace-nowrap px-4 py-5 text-[#344054]">{item.refundMethod}{detail.bankInfo && <div className="mt-2 space-y-1 text-xs leading-5 text-[#667085]"><div>户名：{detail.bankInfo.accountName}</div><div>卡号：{detail.bankInfo.cardNo}</div><div>开户行：{detail.bankInfo.bankName}</div></div>}</td><td className="min-w-56 max-w-72 px-4 py-5 leading-6 text-[#667085]">{detail.description}</td><td className="px-4 py-5 text-[#667085]">{item.campus}</td><td className="px-4 py-5 text-[#667085]">{item.applicant}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{item.submitTime}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{detail.lessons}</td><td className="min-w-64 px-4 py-5 text-[#667085]"><div>{detail.className}</div><div className="mt-1 text-xs text-[#98a2b3]">{detail.classAttribute}</div></td><td className="px-4 py-5 text-[#667085]">{detail.grade}</td><td className="px-4 py-5 text-[#667085]">{detail.subject}</td>{rejectedTab && <><td className="px-4 py-5 text-[#b42318]">{item.rejectReason || "未填写"}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{item.completedTime || "--"}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{item.approver || "--"}</td></>}{<td className="whitespace-nowrap px-4 py-5">{item.status === "pending" ? <><button onClick={() => setConfirmAction({ item, action: "completed" })} className="mr-3 font-medium text-[#027a48] hover:underline">通过</button><button onClick={() => setConfirmAction({ item, action: "rejected" })} className="font-medium text-[#d92d20] hover:underline">驳回</button></> : <span className="text-[#98a2b3]">--</span>}</td>}</tr>)}</tbody></table>{!filteredApplications.length && <div className="px-6 py-16 text-center text-sm text-[#667085]">当前筛选条件下没有申请记录</div>}</div></section></div>{detailItem && <ApprovalDetailDrawer item={detailItem.item} index={detailItem.index} onClose={() => setDetailItem(null)} />}{amountItem && <AmountDetailDrawer item={amountItem} onClose={() => setAmountItem(null)} />}{confirmAction && <ConfirmActionDialog item={confirmAction.item} action={confirmAction.action} onCancel={() => setConfirmAction(null)} onConfirm={() => { onUpdateStatus(confirmAction.item.id, confirmAction.action); setConfirmAction(null); }} />}</main>;
 }
@@ -316,7 +362,7 @@ export function RefundApprovalTablePage({ applications, activeTab, onBack, onCha
   return <main className="min-h-screen bg-[#f5f7fb] px-2 py-5 text-[#182230] sm:px-3 lg:px-4"><div className="mx-auto max-w-[1900px] space-y-4"><header className="flex items-center justify-between rounded-2xl border border-[#e5e9f0] bg-white px-5 py-4 shadow-sm"><h1 className="text-2xl font-semibold text-[#1d2939]">财务退款审批</h1><button onClick={onBack} className="rounded-lg border border-[#dbe3ef] px-4 py-2 text-sm font-semibold text-[#667085] hover:bg-[#f8fafc]">返回首页</button></header><section className="overflow-hidden rounded-2xl border border-[#e5e9f0] bg-white shadow-sm"><div className="flex items-center gap-6 border-b border-[#e5e9f0] px-5 pt-2">{tabs.map((tab) => <button key={tab.id} onClick={() => onChangeTab(tab.id)} className={`border-b-2 px-1 py-4 text-sm font-semibold ${activeTab === tab.id ? "border-[#165dff] text-[#165dff]" : "border-transparent text-[#667085]"}`}>{tab.label}<span className="ml-1 text-xs">({tabCounts[tab.id]})</span></button>)}</div><div className="flex flex-wrap gap-3 border-b border-[#edf0f4] bg-[#fbfcff] p-4"><div className="relative"><Search size={16} className="pointer-events-none absolute left-3 top-3 text-[#98a2b3]" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索申请编号、姓名、学号、手机号" className="h-10 w-72 rounded-lg border border-[#dbe3ef] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#165dff]" /></div><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm text-[#344054]"><option value="all">全部类型</option><option value="特殊退课">特殊退课</option><option value="特殊退费">特殊退费</option></select><select value={scenarioFilter} onChange={(event) => setScenarioFilter(event.target.value)} className="h-10 min-w-44 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm text-[#344054]"><option value="all">全部退费场景</option>{scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.label}</option>)}</select><select value={refundMethodFilter} onChange={(event) => setRefundMethodFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm text-[#344054]"><option value="all">全部退款方式</option>{refundMethods.map((method) => <option key={method}>{method}</option>)}</select><select value={campusFilter} onChange={(event) => setCampusFilter(event.target.value)} className="h-10 min-w-36 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm text-[#344054]"><option value="all">全部办理校区</option>{campuses.map((campus) => <option key={campus}>{campus}</option>)}</select><span className="ml-auto self-center text-sm text-[#667085]">共 {filteredApplications.length} 条</span></div><div className="overflow-x-auto"><table className="min-w-[2200px] w-full border-collapse text-sm"><thead className="bg-[#f8fafc] text-left text-[#667085]"><tr>{["申请编号", "学员信息", "类型", "退费场景", "退款金额", "退款方式", "办理校区", "申请人", "申请时间", "退课课次", "退课原因", "申请说明", "关联班级", "年级", "学科", "操作"].map((title) => <th key={title} className="whitespace-nowrap border-b border-[#e5e9f0] px-4 py-3 font-medium">{title}</th>)}</tr></thead><tbody>{filteredApplications.map(({ item, index, detail }) => <tr key={item.id} className="border-b border-[#edf0f4] align-top hover:bg-[#fbfcff]"><td className="whitespace-nowrap px-4 py-5"><button onClick={() => setDetailItem({ item, index })} className="font-medium text-[#165dff] hover:underline">{item.id}</button></td><td className="whitespace-nowrap px-4 py-5"><div className="font-medium text-[#344054]">{detail.name}</div><div className="mt-1 text-xs text-[#667085]">{detail.studentNo}</div><div className="mt-1 text-xs text-[#667085]">{detail.phone}</div></td><td className="px-4 py-5 text-[#344054]">{detail.type}</td><td className="whitespace-nowrap px-4 py-5 text-[#344054]">{item.scenarioLabel}</td><td className="whitespace-nowrap px-4 py-5"><button onClick={() => setAmountItem(item)} className="group inline-flex items-center gap-1 font-semibold text-[#d85b18] hover:underline">¥ {formatMoney(item.amount)}<span className="relative inline-flex"><CircleHelp size={15} className="text-[#98a2b3]" /><span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-44 -translate-x-1/2 rounded-md bg-[#344054] px-2 py-1 text-xs font-normal text-white opacity-0 transition-opacity group-hover:opacity-100">点击查看退款明细</span></span></button></td><td className="px-4 py-5 text-[#344054]">{item.refundMethod}</td><td className="px-4 py-5 text-[#667085]">{item.campus}</td><td className="px-4 py-5 text-[#667085]">{item.applicant}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{item.submitTime}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{detail.lessons}</td><td className="px-4 py-5 text-[#667085]">{detail.reason}</td><td className="min-w-56 max-w-72 px-4 py-5 leading-6 text-[#667085]">{detail.description}</td><td className="min-w-56 px-4 py-5 text-[#667085]">{detail.className}</td><td className="px-4 py-5 text-[#667085]">{detail.grade}</td><td className="px-4 py-5 text-[#667085]">{detail.subject}</td><td className="whitespace-nowrap px-4 py-5">{item.status === "pending" ? <><button onClick={() => setConfirmAction({ item, action: "completed" })} className="mr-3 font-medium text-[#027a48] hover:underline">通过</button><button onClick={() => setConfirmAction({ item, action: "rejected" })} className="font-medium text-[#d92d20] hover:underline">驳回</button></> : <span className="text-[#98a2b3]">--</span>}</td></tr>)}</tbody></table>{!filteredApplications.length && <div className="px-6 py-16 text-center text-sm text-[#667085]">当前筛选条件下没有申请记录</div>}</div></section></div>{detailItem && <ApprovalDetailDrawer item={detailItem.item} index={detailItem.index} onClose={() => setDetailItem(null)} />}{amountItem && <AmountDetailDrawer item={amountItem} onClose={() => setAmountItem(null)} />}{confirmAction && <ConfirmActionDialog item={confirmAction.item} action={confirmAction.action} onCancel={() => setConfirmAction(null)} onConfirm={() => { onUpdateStatus(confirmAction.item.id, confirmAction.action); setConfirmAction(null); }} />}</main>;
 }
 
-export function RefundApprovalTablePageV3({ applications, activeTab, onBack, onChangeTab, onUpdateStatus }: { applications: ApprovalApplication[]; activeTab: ApprovalStatus; onBack: () => void; onChangeTab: (tab: ApprovalStatus) => void; onUpdateStatus: (id: string, status: ApprovalAction, reason?: string) => void }) {
+export function RefundApprovalTablePageV3({ applications, activeTab, onBack, onChangeTab, onUpdateStatus, onBatchUpdateStatus, onCreateBatchRefund }: { applications: ApprovalApplication[]; activeTab: ApprovalStatus; onBack: () => void; onChangeTab: (tab: ApprovalStatus) => void; onUpdateStatus: (id: string, status: ApprovalAction, reason?: string) => void; onBatchUpdateStatus: (ids: string[], status: ApprovalAction, reason?: string) => void; onCreateBatchRefund: () => void }) {
   const [applicationSearch, setApplicationSearch] = useState("");
   const [studentSearch, setStudentSearch] = useState("");
   const [teacherSearch, setTeacherSearch] = useState("");
@@ -331,11 +377,18 @@ export function RefundApprovalTablePageV3({ applications, activeTab, onBack, onC
   const [detailItem, setDetailItem] = useState<{ item: ApprovalApplication; index: number } | null>(null);
   const [amountItem, setAmountItem] = useState<ApprovalApplication | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ item: ApprovalApplication; index?: number; action: ApprovalAction } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [batchMode, setBatchMode] = useState(false);
   const rejectedTab = activeTab === "rejected";
   const tabCounts = { pending: applications.filter((item) => item.status === "pending").length, completed: applications.filter((item) => item.status === "completed").length, rejected: applications.filter((item) => item.status === "rejected").length };
   const methods = Array.from(new Set(applications.map((item) => item.refundMethod)));
   const campuses = Array.from(new Set(applications.map((item) => item.campus)));
   const filtered = useMemo(() => applications.map((item, index) => ({ item, index, detail: getStudentDetails(item, index) })).filter(({ item, detail }) => item.status === activeTab && (!applicationSearch || item.id.includes(applicationSearch)) && (!studentSearch || `${detail.name}${detail.studentNo}${detail.phone}`.includes(studentSearch)) && (!teacherSearch || detail.teacher.includes(teacherSearch)) && (typeFilter === "all" || detail.type === typeFilter) && (scenarioFilter === "all" || item.scenarioId === scenarioFilter || detail.sceneLabel === scenarioFilter) && (yearFilter === "all" || detail.year === yearFilter) && (quarterFilter === "all" || detail.quarter === quarterFilter) && (gradeFilter === "all" || detail.grade === gradeFilter) && (subjectFilter === "all" || detail.subject === subjectFilter) && (refundMethodFilter === "all" || item.refundMethod === refundMethodFilter) && (campusFilter === "all" || item.campus === campusFilter)), [applications, activeTab, applicationSearch, studentSearch, teacherSearch, typeFilter, scenarioFilter, yearFilter, quarterFilter, gradeFilter, subjectFilter, refundMethodFilter, campusFilter]);
+  const pendingVisibleIds = filtered.filter(({ item }) => item.status === "pending").map(({ item }) => item.id);
+  useEffect(() => {
+    setSelectedIds([]);
+    setBatchMode(false);
+  }, [activeTab]);
   useEffect(() => {
     const handleApplicationIdClick = (event: Event) => {
       const button = (event.target as HTMLElement).closest("button");
@@ -381,6 +434,198 @@ export function RefundApprovalTablePageV3({ applications, activeTab, onBack, onC
       insertedOrderNodes.forEach((node) => node.remove());
     };
   }, [filtered]);
+  useEffect(() => {
+    if (activeTab !== "pending") return;
+    const main = document.querySelector("main");
+    const section = main?.querySelector("section");
+    const filterBar = section?.querySelector(":scope > div:nth-child(2)");
+    const table = section?.querySelector("table");
+    if (!main || !filterBar || !table) return;
+
+    const modeButton = document.createElement("button");
+    modeButton.type = "button";
+    modeButton.textContent = batchMode ? "退出批量操作" : "批量操作";
+    modeButton.className = batchMode
+      ? "h-10 rounded-lg border border-[#bcd1ff] bg-[#eef4ff] px-4 text-sm font-semibold text-[#165dff]"
+      : "h-10 rounded-lg border border-[#dbe3ef] bg-white px-4 text-sm font-semibold text-[#344054] hover:border-[#bcd1ff] hover:text-[#165dff]";
+    modeButton.onclick = () => {
+      setSelectedIds([]);
+      setBatchMode((current) => !current);
+    };
+    filterBar.appendChild(modeButton);
+
+    if (!batchMode) {
+      return () => modeButton.remove();
+    }
+
+    const rows = Array.from(table.querySelectorAll("tbody tr"));
+    rows.forEach((row) => {
+      const id = row.querySelector("td button")?.textContent?.trim();
+      const firstCell = row.querySelector("td");
+      if (!id || !firstCell) return;
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = selectedIds.includes(id);
+      checkbox.className =
+        "mr-3 size-4 cursor-pointer align-middle accent-[#165dff]";
+      checkbox.setAttribute("aria-label", `选择申请 ${id}`);
+      checkbox.onchange = () =>
+        setSelectedIds((current) =>
+          checkbox.checked
+            ? [...new Set([...current, id])]
+            : current.filter((item) => item !== id),
+        );
+      firstCell.prepend(checkbox);
+    });
+
+    const bottomBar = document.createElement("div");
+    bottomBar.className =
+      "fixed inset-x-0 bottom-0 z-[80] border-t border-[#e5e9f0] bg-white px-6 py-4 shadow-[0_-8px_24px_rgba(15,23,42,0.10)]";
+    const bottomContent = document.createElement("div");
+    bottomContent.className =
+      "mx-auto flex max-w-[1900px] items-center justify-between gap-4";
+
+    const selectAllLabel = document.createElement("label");
+    selectAllLabel.className =
+      "inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#344054]";
+    const selectAll = document.createElement("input");
+    selectAll.type = "checkbox";
+    selectAll.checked =
+      pendingVisibleIds.length > 0 &&
+      pendingVisibleIds.every((id) => selectedIds.includes(id));
+    selectAll.className = "size-4 cursor-pointer accent-[#165dff]";
+    selectAll.onchange = () =>
+      setSelectedIds(selectAll.checked ? pendingVisibleIds : []);
+    const selectAllText = document.createElement("span");
+    selectAllText.textContent = "全选";
+    const selectedText = document.createElement("span");
+    selectedText.className = "font-normal text-[#667085]";
+    selectedText.textContent = `已选择 ${selectedIds.length} 条`;
+    selectAllLabel.append(selectAll, selectAllText, selectedText);
+
+    const actions = document.createElement("div");
+    actions.className = "flex items-center gap-3";
+    let activeDialog: HTMLElement | null = null;
+    const openBatchDialog = (action: ApprovalAction) => {
+      activeDialog?.remove();
+      const isReject = action === "rejected";
+      const overlay = document.createElement("div");
+      overlay.className =
+        "fixed inset-0 z-[120] flex items-center justify-center bg-[#101828]/45 px-4";
+      const dialog = document.createElement("div");
+      dialog.className =
+        "w-full max-w-[500px] rounded-2xl bg-white p-6 shadow-2xl";
+      const title = document.createElement("h2");
+      title.className = "text-lg font-semibold text-[#1d2939]";
+      title.textContent = isReject
+        ? "填写批量驳回原因"
+        : "确认批量通过退款申请？";
+      dialog.appendChild(title);
+
+      let reasonInput: HTMLTextAreaElement | null = null;
+      if (isReject) {
+        const description = document.createElement("p");
+        description.className = "mt-2 text-sm leading-6 text-[#667085]";
+        description.textContent = `本次将驳回已选择的 ${selectedIds.length} 条退款申请，请填写驳回原因。`;
+        reasonInput = document.createElement("textarea");
+        reasonInput.autofocus = true;
+        reasonInput.placeholder = "请输入驳回原因";
+        reasonInput.className =
+          "mt-4 min-h-28 w-full resize-none rounded-lg border border-[#dbe3ef] px-3 py-2.5 text-sm outline-none focus:border-[#165dff]";
+        dialog.append(description, reasonInput);
+      } else {
+        const message = document.createElement("div");
+        message.className =
+          "mt-4 rounded-xl border border-[#ffd2b3] bg-[#fff8f2] p-4 text-sm leading-6 text-[#7a431c]";
+        message.innerHTML = `已选择 <strong>${selectedIds.length}</strong> 条退款申请。<br />继续确认后，系统将真正为这些申请办理退款，请确认操作无误。`;
+        dialog.appendChild(message);
+      }
+
+      const footer = document.createElement("div");
+      footer.className = "mt-6 flex justify-end gap-3";
+      const cancelButton = document.createElement("button");
+      cancelButton.type = "button";
+      cancelButton.textContent = "取消";
+      cancelButton.className =
+        "rounded-lg border border-[#dbe3ef] px-5 py-2.5 text-sm font-semibold text-[#667085]";
+      const confirmButton = document.createElement("button");
+      confirmButton.type = "button";
+      confirmButton.textContent = isReject ? "确认驳回" : "确认并退款";
+      confirmButton.className = isReject
+        ? "rounded-lg bg-[#d92d20] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+        : "rounded-lg bg-[#027a48] px-5 py-2.5 text-sm font-semibold text-white";
+      if (isReject) {
+        confirmButton.disabled = true;
+        reasonInput!.oninput = () => {
+          confirmButton.disabled = !reasonInput!.value.trim();
+        };
+      }
+      const closeDialog = () => {
+        overlay.remove();
+        activeDialog = null;
+      };
+      cancelButton.onclick = closeDialog;
+      overlay.onclick = (event) => {
+        if (event.target === overlay) closeDialog();
+      };
+      confirmButton.onclick = () => {
+        const reason = reasonInput?.value.trim();
+        if (isReject && !reason) return;
+        onBatchUpdateStatus(
+          selectedIds,
+          action,
+          isReject ? reason : undefined,
+        );
+        closeDialog();
+        setSelectedIds([]);
+        setBatchMode(false);
+      };
+      footer.append(cancelButton, confirmButton);
+      dialog.appendChild(footer);
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+      activeDialog = overlay;
+      reasonInput?.focus();
+    };
+    const approveButton = document.createElement("button");
+    approveButton.type = "button";
+    approveButton.textContent = "批量通过";
+    approveButton.disabled = selectedIds.length === 0;
+    approveButton.className =
+      "rounded-lg bg-[#027a48] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40";
+    approveButton.onclick = () => {
+      if (selectedIds.length) openBatchDialog("completed");
+    };
+    const rejectButton = document.createElement("button");
+    rejectButton.type = "button";
+    rejectButton.textContent = "批量驳回";
+    rejectButton.disabled = selectedIds.length === 0;
+    rejectButton.className =
+      "rounded-lg bg-[#d92d20] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40";
+    rejectButton.onclick = () => {
+      if (selectedIds.length) openBatchDialog("rejected");
+    };
+    actions.append(approveButton, rejectButton);
+    bottomContent.append(selectAllLabel, actions);
+    bottomBar.appendChild(bottomContent);
+    main.appendChild(bottomBar);
+
+    return () => {
+      modeButton.remove();
+      bottomBar.remove();
+      activeDialog?.remove();
+      rows.forEach((row) =>
+        row.querySelector("input[type='checkbox']")?.remove(),
+      );
+    };
+  }, [
+    activeTab,
+    batchMode,
+    filtered,
+    pendingVisibleIds.join(","),
+    selectedIds.join(","),
+    onBatchUpdateStatus,
+  ]);
   const headers = ["申请编号", "学员信息", "申请类型", "退课/退费场景", "退款金额", "退款方式", "申请说明", "退课课次", "关联班级", "办理校区", "申请人", "申请时间", ...(rejectedTab ? ["驳回原因", "驳回时间", "驳回人姓名"] : []), "操作"];
   return <main className="min-h-screen bg-[#f5f7fb] px-2 py-5 text-[#182230] sm:px-3 lg:px-4"><div className="mx-auto max-w-[1900px] space-y-4"><header className="flex items-center justify-between rounded-2xl border border-[#e5e9f0] bg-white px-5 py-4 shadow-sm"><h1 className="text-2xl font-semibold text-[#1d2939]">财务退款审批</h1><button onClick={onBack} className="rounded-lg border border-[#dbe3ef] px-4 py-2 text-sm font-semibold text-[#667085]">返回首页</button></header><section className="overflow-hidden rounded-2xl border border-[#e5e9f0] bg-white shadow-sm"><div className="flex items-center gap-6 border-b border-[#e5e9f0] px-5 pt-2">{tabs.map((tab) => <button key={tab.id} onClick={() => onChangeTab(tab.id)} className={`border-b-2 px-1 py-4 text-sm font-semibold ${activeTab === tab.id ? "border-[#165dff] text-[#165dff]" : "border-transparent text-[#667085]"}`}>{tab.label}<span className="ml-1 text-xs">({tabCounts[tab.id]})</span></button>)}</div><div className="flex flex-wrap gap-3 border-b border-[#edf0f4] bg-[#fbfcff] p-4"><input value={applicationSearch} onChange={(event) => setApplicationSearch(event.target.value)} placeholder="搜索申请编号" className="h-10 w-44 rounded-lg border border-[#dbe3ef] px-3 text-sm outline-none focus:border-[#165dff]" /><input value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} placeholder="搜索学员姓名、学号、手机号" className="h-10 w-60 rounded-lg border border-[#dbe3ef] px-3 text-sm outline-none focus:border-[#165dff]" /><input value={teacherSearch} onChange={(event) => setTeacherSearch(event.target.value)} placeholder="搜索老师姓名" className="h-10 w-44 rounded-lg border border-[#dbe3ef] px-3 text-sm outline-none focus:border-[#165dff]" /><select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部年度</option><option>2026</option><option>2025</option></select><select value={quarterFilter} onChange={(event) => setQuarterFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部季度</option><option>春季</option><option>暑假</option><option>秋季</option></select><select value={gradeFilter} onChange={(event) => setGradeFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部年级</option>{grades.map((grade) => <option key={grade}>{grade}</option>)}</select><select value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部学科</option>{subjects.map((subject) => <option key={subject}>{subject}</option>)}</select><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部申请类型</option><option>特殊退课</option><option>特殊退费</option></select><select value={scenarioFilter} onChange={(event) => setScenarioFilter(event.target.value)} className="h-10 min-w-44 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部退课/退费场景</option><option value="单次课退课">单次课退课</option><option value="已下课课次退课">已下课课次退课</option>{scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.label}</option>)}</select><select value={refundMethodFilter} onChange={(event) => setRefundMethodFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部退款方式</option>{methods.map((method) => <option key={method}>{method}</option>)}</select><select value={campusFilter} onChange={(event) => setCampusFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部办理校区</option>{campuses.map((campus) => <option key={campus}>{campus}</option>)}</select><span className="ml-auto self-center text-sm text-[#667085]">共 {filtered.length} 条</span></div><div className="overflow-x-auto"><table className="min-w-[2300px] w-full border-collapse text-sm"><thead className="bg-[#f8fafc] text-left text-[#667085]"><tr>{headers.map((title, index) => <th key={title} className={`whitespace-nowrap border-b border-[#e5e9f0] px-4 py-3 font-medium ${index === 0 ? "sticky left-0 z-20 bg-[#f8fafc]" : index === 1 ? "sticky left-[150px] z-20 bg-[#f8fafc]" : ""}`}>{title}</th>)}</tr></thead><tbody>{filtered.map(({ item, index, detail }) => <tr key={item.id} className="border-b border-[#edf0f4] align-top hover:bg-[#fbfcff]"><td className="sticky left-0 z-10 w-[150px] whitespace-nowrap bg-white px-4 py-5 shadow-[3px_0_6px_rgba(15,23,42,0.03)]"><button onClick={() => setAmountItem(item)} className="font-medium text-[#165dff] hover:underline">{item.id}</button></td><td className="sticky left-[150px] z-10 whitespace-nowrap bg-white px-4 py-5 shadow-[4px_0_8px_rgba(15,23,42,0.04)]"><div className="font-medium text-[#344054]">{detail.name}</div><div className="mt-1 text-xs text-[#667085]">{detail.studentNo}</div><div className="mt-1 text-xs text-[#667085]">{detail.phone}</div></td><td className="px-4 py-5 text-[#344054]">{detail.type}</td><td className="whitespace-nowrap px-4 py-5 text-[#344054]">{detail.sceneLabel}</td><td className="whitespace-nowrap px-4 py-5"><button onClick={() => setAmountItem(item)} className="inline-flex items-center gap-1 font-semibold text-[#d85b18] hover:underline">¥ {formatMoney(item.amount)}<CircleHelp size={15} className="text-[#98a2b3]" /></button></td><td className="whitespace-nowrap px-4 py-5 text-[#344054]">{item.refundMethod}{detail.bankInfo && <div className="mt-2 space-y-1 text-xs leading-5 text-[#667085]"><div>户名：{detail.bankInfo.accountName}</div><div>卡号：{detail.bankInfo.cardNo}</div><div>开户行：{detail.bankInfo.bankName}</div></div>}</td><td className="min-w-56 max-w-72 px-4 py-5 leading-6 text-[#667085]">{detail.description}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{detail.lessons}</td><td className="min-w-64 px-4 py-5 text-[#667085]"><div>{detail.className}</div><div className="mt-1 text-xs text-[#98a2b3]">{detail.classAttribute}</div></td><td className="px-4 py-5 text-[#667085]">{item.campus}</td><td className="px-4 py-5 text-[#667085]">{item.applicant}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{item.submitTime}</td>{rejectedTab && <><td className="px-4 py-5 text-[#b42318]">{item.rejectReason || "未填写"}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{item.completedTime || "--"}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{item.approver || "--"}</td></>}{<td className="whitespace-nowrap px-4 py-5">{item.status === "pending" ? <><button onClick={() => setConfirmAction({ item, action: "completed" })} className="mr-3 font-medium text-[#027a48] hover:underline">通过</button><button onClick={() => setConfirmAction({ item, action: "rejected" })} className="font-medium text-[#d92d20] hover:underline">驳回</button></> : <span className="text-[#98a2b3]">--</span>}</td>}</tr>)}</tbody></table>{!filtered.length && <div className="px-6 py-16 text-center text-sm text-[#667085]">当前筛选条件下没有申请记录</div>}</div></section></div>{amountItem && <AmountDetailDrawer item={amountItem} onClose={() => setAmountItem(null)} />}{confirmAction && <ConfirmActionDialog item={confirmAction.item} action={confirmAction.action} onCancel={() => setConfirmAction(null)} onConfirm={() => { onUpdateStatus(confirmAction.item.id, confirmAction.action); setConfirmAction(null); }} />}</main>;
 }

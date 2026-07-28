@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { PromotionActivityPage } from "./components/PromotionActivityPage";
 import { DiscountRuleDetailsPage, StudentDiscountPage } from "./components/StudentDiscountPage";
 import { RefundApprovalTablePageV3 } from "./components/RefundApprovalTablePage";
+import { BatchRefundApplicationPage } from "./components/BatchRefundApplicationPage";
 import { PrdPage } from "./components/PrdPage";
 import {
   Check,
@@ -34,7 +35,7 @@ type SpecialRefundScenario =
 type SpecialApplicationStatus = "pending" | "completed" | "rejected";
 type ConfigPanel = "onlineRebate" | "cashDiscount" | "activity" | "personal" | null;
 type ApprovalPageTab = SpecialApplicationStatus;
-type AppPage = "home" | "analysis" | "approval" | "activity" | "personalDiscount" | "discountRules" | "prd";
+type AppPage = "home" | "analysis" | "approval" | "batchRefund" | "activity" | "personalDiscount" | "discountRules" | "prd";
 type SpecialRefundApplication = {
   id: string;
   applicant: string;
@@ -48,6 +49,8 @@ type SpecialRefundApplication = {
   approver?: string;
   completedTime?: string;
   rejectReason?: string;
+  batchOrderCount?: number;
+  batchFailedCount?: number;
 };
 type DiscountOptionId =
   | "plan_one"
@@ -402,6 +405,7 @@ export default function App() {
   const [studentDiscountRuleId, setStudentDiscountRuleId] = useState<number | null>(null);
   const [approvalTab, setApprovalTab] = useState<ApprovalPageTab>("pending");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [batchRefundOpen, setBatchRefundOpen] = useState(false);
   const [configPanel, setConfigPanel] = useState<ConfigPanel>(null);
   const [detailView, setDetailView] = useState<DetailView>(null);
   const [showAllLessonRows, setShowAllLessonRows] = useState(false);
@@ -901,6 +905,8 @@ export default function App() {
         onBack={() => setActivePage("home")}
         onChangeTab={setApprovalTab}
         onUpdateStatus={(id, status, reason) => setSpecialApplications((current) => current.map((item) => item.id === id ? { ...item, status, rejectReason: reason || item.rejectReason, completedTime: new Date().toISOString().slice(0, 16).replace("T", " "), approver: "财务主管" } : item))}
+        onBatchUpdateStatus={(ids, status, reason) => setSpecialApplications((current) => current.map((item) => ids.includes(item.id) ? { ...item, status, rejectReason: reason || item.rejectReason, completedTime: new Date().toISOString().slice(0, 16).replace("T", " "), approver: "财务主管" } : item))}
+        onCreateBatchRefund={() => setBatchRefundOpen(true)}
       />
     );
   }
@@ -1055,12 +1061,12 @@ export default function App() {
             <div className="px-4 py-4 sm:px-5 sm:py-5">
               <button
                 type="button"
-                disabled
-                className="group flex w-full items-center justify-between rounded-[20px] border border-dashed border-[#dbe3ef] bg-[#f8fafc] px-4 py-4 text-left text-[15px] font-medium text-[#667085] shadow-[0_1px_2px_rgba(15,23,42,0.04)] opacity-90 sm:px-5 sm:py-5"
+                onClick={() => setBatchRefundOpen(true)}
+                className="group flex w-full items-center justify-between rounded-[20px] border border-[#bcd1ff] bg-[#eef4ff] px-4 py-4 text-left text-[15px] font-semibold text-[#165dff] shadow-[0_8px_18px_rgba(22,93,255,0.08)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#e6efff] sm:px-5 sm:py-5"
               >
-                <span className="max-w-[calc(100%-92px)] leading-6">功能入口预留，暂未开发</span>
-                <span className="inline-flex h-6 items-center rounded-full border border-[#dbe3ef] bg-white px-2.5 text-[11px] font-medium leading-none text-[#667085]">
-                  暂未开发
+                <span className="max-w-[calc(100%-92px)] leading-6">创建批量退费申请</span>
+                <span className="inline-flex h-6 items-center rounded-full border border-[#cfe0ff] bg-white px-2.5 text-[11px] font-medium leading-none text-[#165dff]">
+                  需审批
                 </span>
               </button>
             </div>
@@ -1103,6 +1109,16 @@ export default function App() {
         </div>
       </div>
 
+      {batchRefundOpen && <BatchRefundApplicationPage
+        onClose={() => setBatchRefundOpen(false)}
+        onSubmit={(data) => {
+          const now = new Date();
+          const id = `SP-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(specialApplications.length + 1).padStart(3, "0")}`;
+          setSpecialApplications((current) => [{ id, applicant: "财务A", scenarioId: data.scenarioId, scenarioLabel: data.scenarioLabel, refundMethod: "原路退回", campus: "五里墩校区", amount: data.amount, submitTime: now.toISOString().slice(0, 16).replace("T", " "), status: "pending", batchOrderCount: data.successCount, batchFailedCount: data.failedCount }, ...current]);
+          setBatchRefundOpen(false);
+          setApprovalTab("pending");
+        }}
+      />}
       <AnimatePresence>
         {drawerOpen && <>
           <motion.button aria-label="关闭抽屉" onClick={closeDrawer} className="fixed inset-0 z-40 cursor-default bg-[#101828]/45 backdrop-blur-[1px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
