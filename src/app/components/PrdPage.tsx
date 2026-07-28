@@ -1,10 +1,5 @@
-import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import prdContent from "../../../docs/refund-discount-requirements.md?raw";
-
-type PrdPageProps = {
-  onBack: () => void;
-};
 
 function renderInline(text: string): ReactNode[] {
   const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^\)]+\))/g);
@@ -100,20 +95,10 @@ function MarkdownContent({ content }: { content: string }) {
   return <>{blocks}</>;
 }
 
-export function PrdPage({ onBack }: PrdPageProps) {
+export function PrdPage() {
   return (
     <main className="min-h-screen bg-[#f5f7fb] px-4 py-6 text-[#182230] sm:px-8 lg:px-12">
       <div className="mx-auto max-w-[1180px]">
-        <div className="sticky top-4 z-10 mb-6 flex items-center justify-between rounded-2xl border border-[#e4e9f2] bg-white/95 px-4 py-3 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur sm:px-6">
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-[#31507c] transition hover:bg-[#eef4ff] hover:text-[#165dff]"
-          >
-            <ArrowLeft size={17} />
-            返回退款演示
-          </button>
-          <span className="text-sm font-semibold text-[#667085]">教务退款与优惠体系 PRD</span>
-        </div>
         <article className="rounded-3xl border border-[#e4e9f2] bg-white px-5 py-7 shadow-[0_18px_50px_rgba(15,23,42,0.07)] sm:px-10 sm:py-10">
           <div className="font-['Noto_Sans_SC'] text-[14px] sm:text-[15px]"><MarkdownContent content={prdContent} /></div>
         </article>

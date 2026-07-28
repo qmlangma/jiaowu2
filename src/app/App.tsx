@@ -914,7 +914,7 @@ export default function App() {
   }
 
   if (activePage === "prd") {
-    return <PrdPage onBack={() => setActivePage("home")} />;
+    return <PrdPage />;
   }
 
   return (
