@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { PromotionActivityPage } from "./components/PromotionActivityPage";
 import { DiscountRuleDetailsPage, StudentDiscountPage } from "./components/StudentDiscountPage";
 import { RefundApprovalTablePageV3 } from "./components/RefundApprovalTablePage";
+import { PrdPage } from "./components/PrdPage";
 import {
   Check,
   ChevronDown,
@@ -33,6 +34,7 @@ type SpecialRefundScenario =
 type SpecialApplicationStatus = "pending" | "completed" | "rejected";
 type ConfigPanel = "onlineRebate" | "cashDiscount" | "activity" | "personal" | null;
 type ApprovalPageTab = SpecialApplicationStatus;
+type AppPage = "home" | "analysis" | "approval" | "activity" | "personalDiscount" | "discountRules" | "prd";
 type SpecialRefundApplication = {
   id: string;
   applicant: string;
@@ -392,7 +394,11 @@ function RefundApprovalPage({
 }
 
 export default function App() {
-  const [activePage, setActivePage] = useState<"home" | "analysis" | "approval" | "activity" | "personalDiscount" | "discountRules">("home");
+  const [activePage, setActivePage] = useState<AppPage>(() => {
+    if (typeof window === "undefined") return "home";
+    const page = new URLSearchParams(window.location.search).get("page");
+    return page === "prd" || page === "analysis" ? page : "home";
+  });
   const [studentDiscountRuleId, setStudentDiscountRuleId] = useState<number | null>(null);
   const [approvalTab, setApprovalTab] = useState<ApprovalPageTab>("pending");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -408,6 +414,13 @@ export default function App() {
   const [specialPanel, setSpecialPanel] = useState<SpecialRefundPanel>("form");
   const [specialApplications, setSpecialApplications] = useState<SpecialRefundApplication[]>(SPECIAL_APPLICATION_MOCK_DATA);
   const [specialApplicationStatus, setSpecialApplicationStatus] = useState<"all" | SpecialApplicationStatus>("all");
+
+  const openNewPage = (page: "prd" | "analysis") => {
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.searchParams.set("page", page);
+    window.open(url.toString(), "_blank", "noopener,noreferrer");
+  };
   const [customRefundAmount, setCustomRefundAmount] = useState("0");
   const [customAllocationMode, setCustomAllocationMode] = useState<"lesson" | "spread">("spread");
   const [withdrawSelectionMode, setWithdrawSelectionMode] = useState<WithdrawSelectionMode>("range");
@@ -900,6 +913,10 @@ export default function App() {
     return <DiscountRuleDetailsPage onBack={() => { setStudentDiscountRuleId(null); setActivePage("personalDiscount"); }} onOpenStudentRule={(ruleId) => { setStudentDiscountRuleId(ruleId); setActivePage("personalDiscount"); }} />;
   }
 
+  if (activePage === "prd") {
+    return <PrdPage onBack={() => setActivePage("home")} />;
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_#ffffff_0%,_#f5f7fb_42%,_#eef3fb_100%)] font-['Noto_Sans_SC'] text-[#182230]">
       <div className="mx-auto w-full max-w-[1200px] px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
@@ -907,9 +924,15 @@ export default function App() {
           <div className="sticky top-4 z-20 rounded-[28px] border border-[#e5e9f0] bg-[rgba(255,255,255,0.9)] px-5 py-5 shadow-[0_14px_30px_rgba(15,23,42,0.08)] backdrop-blur-md sm:px-6 sm:py-6">
             <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-4">
-                <h1 className="text-[34px] font-black tracking-[-0.06em] text-[#111827] sm:text-[42px] xl:text-[54px]">退款演示页面</h1>
+                <h1 className="text-[17px] font-black tracking-[-0.06em] text-[#111827] sm:text-[21px] xl:text-[27px]">退款演示页面</h1>
                 <button
-                  onClick={() => setActivePage("analysis")}
+                  onClick={() => openNewPage("prd")}
+                  className="inline-flex h-9 items-center justify-center rounded-full border border-[#cbd8ee] bg-[#f8fbff] px-4 text-sm font-semibold text-[#165dff] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#8eb2ff] hover:bg-white hover:shadow-[0_10px_24px_rgba(22,93,255,0.12)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff]"
+                >
+                  查看PRD
+                </button>
+                <button
+                  onClick={() => openNewPage("analysis")}
                   className="inline-flex h-11 items-center justify-center rounded-full border border-[#dbe3ef] bg-white px-4 text-[15px] font-semibold text-[#1d2939] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#bcd1ff] hover:text-[#165dff] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff]"
                 >
                   查看数据分析
