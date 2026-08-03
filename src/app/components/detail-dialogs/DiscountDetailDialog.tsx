@@ -51,7 +51,7 @@ export function DiscountDetailDialog({
           <table className="w-full min-w-[900px] border-collapse text-sm">
             <thead className="bg-[#f7f8fa] text-left text-[#667085]">
               <tr>
-                {["课次", "课次状态", "原价", "优惠金额", "课耗金额", "已退金额", "剩余可退金额"].map((title) => (
+                {["课次", "课次状态", "原价", "优惠总金额", "课耗金额", "已退金额", "剩余可退金额"].map((title) => (
                   <th key={title} className="sticky top-0 z-20 border-b border-[#e5e9f0] bg-[#f7f8fa] px-4 py-3 font-medium">
                     <span>{title}</span>
                   </th>
