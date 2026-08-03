@@ -709,8 +709,8 @@ export default function App() {
   const isFinanceSingleLessonWithdraw = mode === "withdraw" && withdrawSelectionMode === "multi";
   const hasSelectedCompletedLesson =
     isFinanceSingleLessonWithdraw && selectedLessons.some((lessonId) => lessons.some((lesson) => lesson.id === lessonId && lesson.state === "completed"));
-  const withdrawLessonSelectionTitle = isFinanceSingleLessonWithdraw ? "选择要退的课次（未上课课次需连续选择）" : "选择要退的课次";
-  const withdrawLessonSelectionHint = isFinanceSingleLessonWithdraw ? "已下课课次可单选，未上课课次从所选课次起连续退课" : "请选择起始课次";
+  const withdrawLessonSelectionTitle = "选择要退的课次";
+  const withdrawLessonSelectionHint = isFinanceSingleLessonWithdraw ? "已下课及上课中的课次可单选；未上课课次需从所选课次起连续选择" : "请选择起始课次";
   const specialRefundableLessonCount = specialScenario === "online_rebate" || specialScenario === "high_end_half"
     ? appliedSpecialRefundLessonIds.length
     : specialScenarioLessons.filter((lesson) => getSpecialLessonRemainingRefundAmount(lesson) > 0).length;
