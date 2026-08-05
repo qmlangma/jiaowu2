@@ -736,11 +736,10 @@ export default function App() {
   const customRefundFormulaCourseTotal = 3150;
   const customRefundFormulaDiscount = hasDiscount ? 1575 : 0;
   const customRefundFormulaCashDiscount = cashPaymentDiscountAmount;
-  const customRefundFormulaConsumption = 210;
   const customRefundFormulaRefunded = 0;
   const customRefundFormulaAmount =
-    customRefundFormulaCourseTotal - customRefundFormulaDiscount - customRefundFormulaCashDiscount - customRefundFormulaConsumption - customRefundFormulaRefunded;
-  const customRefundFormulaText = `课程总价¥${formatMoney(customRefundFormulaCourseTotal)}-优惠金额¥${formatMoney(customRefundFormulaDiscount)}-现金优惠¥${formatMoney(customRefundFormulaCashDiscount)}-课耗金额¥${formatMoney(customRefundFormulaConsumption)}-已退金额¥${formatMoney(customRefundFormulaRefunded)}=¥${formatMoney(customRefundFormulaAmount)}`;
+    customRefundFormulaCourseTotal - customRefundFormulaDiscount - customRefundFormulaCashDiscount - customRefundFormulaRefunded;
+  const customRefundFormulaText = `课程总价¥${formatMoney(customRefundFormulaCourseTotal)}-优惠金额¥${formatMoney(customRefundFormulaDiscount)}-现金优惠¥${formatMoney(customRefundFormulaCashDiscount)}-已退金额¥${formatMoney(customRefundFormulaRefunded)}=¥${formatMoney(customRefundFormulaAmount)}`;
   const specialRefundMaxAmount = specialScenario === "custom_refund" ? customRefundFormulaAmount : getSpecialMaxRefundableAmount();
   const specialApplicationList = specialApplications.filter(
     (item) => specialApplicationStatus === "all" || item.status === specialApplicationStatus,
@@ -1775,8 +1774,6 @@ export default function App() {
                         <span>−</span>
                         <span>现金优惠¥{formatMoney(customRefundFormulaCashDiscount)}</span>
                         <span>−</span>
-                        <span>课耗金额¥{formatMoney(customRefundFormulaConsumption)}</span>
-                        <span>−</span>
                         <span>已退金额¥{formatMoney(customRefundFormulaRefunded)}</span>
                         <span>=</span>
                         <strong className="text-[#ea580c]">¥{formatMoney(customRefundFormulaAmount)}</strong>
@@ -1788,10 +1785,10 @@ export default function App() {
                         <p className="text-sm font-semibold text-[#1d2939]">课次明细表</p>
                         <div className="overflow-x-auto rounded-lg border border-[#e5e9f0]">
                           <div className="max-h-[58vh] overflow-auto">
-                            <table className="w-full min-w-[900px] border-collapse text-sm">
+                            <table className="w-full min-w-[840px] border-collapse text-sm">
                               <thead className="bg-[#f7f8fa] text-left text-[#667085]">
                                 <tr>
-                                  {["课次", "课次状态", "原价", "优惠总金额", "课耗金额", "本次退款前已退金额", "本次退款后已退金额"].map((title) => (
+                                  {["课次", "课次状态", "原价", "优惠总金额", "课耗金额", "已退金额", "剩余可退金额"].map((title) => (
                                     <th key={title} className="sticky top-0 z-20 border-b border-[#e5e9f0] bg-[#f7f8fa] px-4 py-3 font-medium">
                                       <span className="group relative inline-flex items-center gap-1">
                                         <span>{title}</span>
@@ -1807,10 +1804,10 @@ export default function App() {
                                   const isSelectedRefundLesson = specialScenario === "custom_refund" && customAllocationMode === "lesson" && specialSelectedLessonIds.includes(lesson.id);
                                   const lessonStatus = lesson.state === "completed" ? "已下课" : refunded ? "已退款" : "未上课";
                                   const lessonDiscount = getLessonDiscount(lesson);
-                                  const lessonActualPaid = getCurrentLessonPaidAmount(lesson);
                                   const lessonConsumption = getCourseConsumption(lesson);
-                                  const lessonRefundedAmountBefore = 0;
-                                  const lessonRefundedAmountAfter = lessonRefundedAmountBefore + getSpecialLessonRefundableAmount(lesson);
+                                  const lessonPaidAmount = getCurrentLessonPaidAmount(lesson);
+                                  const lessonRefundedAmount = refunded ? lessonPaidAmount : 0;
+                                  const lessonRefundableAmount = Math.max(lessonPaidAmount - lessonRefundedAmount, 0);
                                   return (
                                   <tr key={lesson.id} className={isSelectedRefundLesson ? "bg-[#FEF8F3]" : lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}>
                                       <td className="px-4 py-3 font-medium">第 {lesson.id} 课次</td>
@@ -1822,8 +1819,8 @@ export default function App() {
                                       <td className="px-4 py-3">¥ 210.00</td>
                                       <td className="px-4 py-3 text-[#d85b18]">-¥ {formatMoney(lessonDiscount)}</td>
                                       <td className="px-4 py-3">¥ {formatMoney(lessonConsumption)}</td>
-                                      <td className="px-4 py-3">¥ {formatMoney(lessonRefundedAmountBefore)}</td>
-                                      <td className="px-4 py-3 font-medium text-[#165dff]">¥ {formatMoney(lessonRefundedAmountAfter)}</td>
+                                      <td className="px-4 py-3">¥ {formatMoney(lessonRefundedAmount)}</td>
+                                      <td className="px-4 py-3 font-medium text-[#165dff]">¥ {formatMoney(lessonRefundableAmount)}</td>
                                     </tr>
                                   );
                                 })}
@@ -1835,8 +1832,12 @@ export default function App() {
                                   <td className="px-4 py-3">¥ {formatMoney(detailLessons.length * ORIGINAL_PRICE)}</td>
                                   <td className="px-4 py-3 text-[#d85b18]">-¥ {formatMoney(detailLessons.reduce((sum, lesson) => sum + getLessonDiscount(lesson), 0))}</td>
                                   <td className="px-4 py-3">¥ {formatMoney(detailLessons.reduce((sum, lesson) => sum + getCourseConsumption(lesson), 0))}</td>
-                                  <td className="px-4 py-3">¥ {formatMoney(0)}</td>
-                                  <td className="px-4 py-3 text-[#165dff]">¥ {formatMoney(detailLessons.reduce((sum, lesson) => sum + getSpecialLessonRefundableAmount(lesson), 0))}</td>
+                                  <td className="px-4 py-3">¥ {formatMoney(detailLessons.reduce((sum, lesson) => sum + (lesson.state === "refunded" ? getCurrentLessonPaidAmount(lesson) : 0), 0))}</td>
+                                  <td className="px-4 py-3 text-[#165dff]">¥ {formatMoney(detailLessons.reduce((sum, lesson) => {
+                                    const lessonPaidAmount = getCurrentLessonPaidAmount(lesson);
+                                    const lessonRefundedAmount = lesson.state === "refunded" ? lessonPaidAmount : 0;
+                                    return sum + Math.max(lessonPaidAmount - lessonRefundedAmount, 0);
+                                  }, 0))}</td>
                                 </tr>
                               </tfoot>
                             </table>
@@ -1850,10 +1851,10 @@ export default function App() {
                         <p className="text-sm font-semibold text-[#1d2939]">课次明细表</p>
                         <div className="overflow-x-auto rounded-lg border border-[#e5e9f0]">
                           <div className="max-h-[58vh] overflow-auto">
-                            <table className="w-full min-w-[900px] border-collapse text-sm">
+                            <table className="w-full min-w-[1040px] border-collapse text-sm">
                               <thead className="bg-[#f7f8fa] text-left text-[#667085]">
                                 <tr>
-                                  {["课次", "课次状态", "原价", "优惠总金额", "课耗金额", "本次退款前已退金额", "本次退款后已退金额"].map((title) => (
+                                  {["课次", "课次状态", "原价", "优惠总金额", "课耗金额", "剩余可退金额", "本次退款前已退金额", "本次退款后已退金额"].map((title) => (
                                     <th key={title} className="sticky top-0 z-20 border-b border-[#e5e9f0] bg-[#f7f8fa] px-4 py-3 font-medium">
                                       <span className="group relative inline-flex items-center gap-1">
                                         <span>{title}</span>
@@ -1872,6 +1873,7 @@ export default function App() {
                                   const lessonActualPaid = getCurrentLessonPaidAmount(lesson);
                                   const lessonConsumption = getCourseConsumption(lesson);
                                   const lessonRefundedAmountBefore = 0;
+                                  const lessonRemainingRefundableAmount = Math.max(lessonActualPaid - lessonRefundedAmountBefore, 0);
                                   const lessonRefundedAmountAfter = lessonRefundedAmountBefore + getSpecialLessonRefundableAmount(lesson);
                                   return (
                                   <tr key={lesson.id} className={isSelectedRefundLesson ? "bg-[#FEF8F3]" : lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}>
@@ -1884,6 +1886,7 @@ export default function App() {
                                       <td className="px-4 py-3">¥ 210.00</td>
                                       <td className="px-4 py-3 text-[#d85b18]">-¥ {formatMoney(lessonDiscount)}</td>
                                       <td className="px-4 py-3">¥ {formatMoney(lessonConsumption)}</td>
+                                      <td className="px-4 py-3 font-medium text-[#165dff]">¥ {formatMoney(lessonRemainingRefundableAmount)}</td>
                                       <td className="px-4 py-3">¥ {formatMoney(lessonRefundedAmountBefore)}</td>
                                       <td className="px-4 py-3 font-medium text-[#165dff]">¥ {formatMoney(lessonRefundedAmountAfter)}</td>
                                     </tr>
@@ -1897,6 +1900,7 @@ export default function App() {
                                   <td className="px-4 py-3">¥ {formatMoney(detailLessons.length * ORIGINAL_PRICE)}</td>
                                   <td className="px-4 py-3 text-[#d85b18]">-¥ {formatMoney(detailLessons.reduce((sum, lesson) => sum + getLessonDiscount(lesson), 0))}</td>
                                   <td className="px-4 py-3">¥ {formatMoney(detailLessons.reduce((sum, lesson) => sum + getCourseConsumption(lesson), 0))}</td>
+                                  <td className="px-4 py-3 text-[#165dff]">¥ {formatMoney(detailLessons.reduce((sum, lesson) => sum + getCurrentLessonPaidAmount(lesson), 0))}</td>
                                   <td className="px-4 py-3">¥ {formatMoney(0)}</td>
                                   <td className="px-4 py-3 text-[#165dff]">¥ {formatMoney(detailLessons.reduce((sum, lesson) => sum + getSpecialLessonRefundableAmount(lesson), 0))}</td>
                                 </tr>

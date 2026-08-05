@@ -97,8 +97,12 @@ function LegacyApprovalDetailDrawer({ item, index, onClose }: { item: ApprovalAp
   return <div className="fixed inset-0 z-[90] flex justify-end bg-[#101828]/45" onClick={onClose}><aside onClick={(event) => event.stopPropagation()} className="flex h-full w-full max-w-[680px] flex-col bg-white shadow-2xl"><header className="flex items-center justify-between border-b border-[#e5e9f0] px-6 py-5"><div><h2 className="text-xl font-semibold text-[#1d2939]">审批详情</h2><p className="mt-1 text-xs text-[#98a2b3]">申请编号：{item.id}</p></div><button onClick={onClose} className="rounded-lg p-2 text-[#667085] hover:bg-[#f2f4f7]"><X size={20} /></button></header><div className="flex-1 space-y-4 overflow-y-auto px-6 py-6"><div className="rounded-xl bg-[#f8fafc] p-4"><div className="flex items-center justify-between"><span className="text-sm text-[#667085]">审批状态</span><StatusBadge status={item.status} /></div><p className="mt-4 text-lg font-semibold text-[#344054]">{detail.name}</p><p className="mt-1 text-sm text-[#667085]">{detail.studentNo} · {detail.phone}</p></div><div className="grid grid-cols-2 gap-3 text-sm"><div className="rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">申请类型</p><p className="mt-1 text-[#344054]">{detail.type}</p></div><div className="rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">退费场景</p><p className="mt-1 text-[#344054]">{item.scenarioLabel}</p></div><div className="rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">退款方式</p><p className="mt-1 text-[#344054]">{item.refundMethod}</p></div><div className="rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">退款金额</p><p className="mt-1 font-semibold text-[#d85b18]">¥ {formatMoney(item.amount)}</p></div></div><div className="rounded-xl border border-[#edf0f4] p-4 text-sm"><p className="font-semibold text-[#344054]">申请信息</p><div className="mt-3 grid grid-cols-2 gap-y-3 text-[#667085]"><span>申请人：{item.applicant}</span><span>申请时间：{item.submitTime}</span><span>办理校区：{item.campus}</span><span>关联班级：{detail.className}</span><span>年级：{detail.grade}</span><span>学科：{detail.subject}</span></div></div><div className="rounded-xl border border-[#edf0f4] p-4 text-sm"><p className="font-semibold text-[#344054]">申请说明</p><p className="mt-2 leading-6 text-[#667085]">{detail.description}</p></div>{item.status === "rejected" && <div className="rounded-xl bg-[#fff5f5] p-4 text-sm text-[#b42318]">驳回原因：{item.rejectReason || "未填写"}</div>}</div><footer className="flex justify-end border-t border-[#e5e9f0] px-6 py-4"><button onClick={onClose} className="rounded-lg bg-[#18234b] px-5 py-2.5 text-sm font-semibold text-white">关闭</button></footer></aside></div>;
 }
 
-function ApprovalDetailDrawer({ item, index, onClose }: { item: ApprovalApplication; index: number; onClose: () => void }) {
+function ApprovalDetailDrawer({ item, index, onClose, onReject, onApprove }: { item: ApprovalApplication; index: number; onClose: () => void; onReject?: () => void; onApprove?: () => void }) {
   const detail = getStudentDetails(item, index);
+  const orderTotal = 3150;
+  const discountAmount = 1575;
+  const paidAmount = orderTotal - discountAmount;
+  const applicationType = detail.type === "特殊退课" ? "退课" : "退款";
   const approvalSteps = [
     { title: "提交申请", person: item.applicant, time: item.submitTime, label: "已提交", tone: "done" },
     {
@@ -112,32 +116,64 @@ function ApprovalDetailDrawer({ item, index, onClose }: { item: ApprovalApplicat
   return <div className="fixed inset-0 z-[90] flex justify-end bg-[#101828]/45" onClick={onClose}>
     <aside onClick={(event) => event.stopPropagation()} className="flex h-full w-full max-w-[720px] flex-col bg-white shadow-2xl">
       <header className="flex items-center justify-between border-b border-[#e5e9f0] px-6 py-5">
-        <div><h2 className="text-xl font-semibold text-[#1d2939]">审批申请详情</h2><p className="mt-1 text-xs text-[#98a2b3]">申请编号：{item.id}</p></div>
+        <div><h2 className="text-xl font-semibold text-[#1d2939]">审批申请详情</h2><p className="mt-1 text-xs text-[#98a2b3]">审批编号：{item.id}</p></div>
         <button onClick={onClose} className="rounded-lg p-2 text-[#667085] hover:bg-[#f2f4f7]"><X size={20} /></button>
       </header>
       <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
-        <section className="rounded-xl bg-[#f8fafc] p-4">
-          <div className="flex items-center justify-between"><span className="text-sm text-[#667085]">审批状态</span><StatusBadge status={item.status} /></div>
-          <p className="mt-4 text-lg font-semibold text-[#344054]">{detail.name}</p><p className="mt-1 text-sm text-[#667085]">{detail.studentNo} · {detail.phone}</p>
+        <section>
+          <h3 className="mb-3 font-semibold text-[#1d2939]">学员信息</h3>
+          <div className="grid grid-cols-3 gap-3 rounded-xl border border-[#e5e9f0] bg-[#f8fafc] p-4 text-sm">
+            <div><p className="text-xs text-[#98a2b3]">姓名</p><p className="mt-1 font-medium text-[#344054]">{detail.name}</p></div>
+            <div><p className="text-xs text-[#98a2b3]">学号</p><p className="mt-1 font-medium text-[#344054]">{detail.studentNo}</p></div>
+            <div><p className="text-xs text-[#98a2b3]">手机号</p><p className="mt-1 font-medium text-[#344054]">{detail.phone}</p></div>
+          </div>
+        </section>
+        <section>
+          <h3 className="mb-3 font-semibold text-[#1d2939]">订单信息</h3>
+          <div className="rounded-xl border border-[#dbe3ef] p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div><p className="text-xs text-[#98a2b3]">班级名称</p><p className="mt-1 font-semibold leading-6 text-[#344054]">{detail.className}</p></div>
+              <div className="shrink-0 text-right"><p className="text-xs text-[#98a2b3]">所购课次</p><p className="mt-1 font-semibold text-[#344054]">1–15</p></div>
+            </div>
+            <div className="mt-4 grid grid-cols-5 gap-3 border-t border-[#edf0f4] pt-4 text-sm">
+              <div><p className="text-xs text-[#98a2b3]">课程总价</p><p className="mt-1 font-semibold text-[#1d2939]">¥ {formatMoney(orderTotal)}</p></div>
+              <div><p className="text-xs text-[#98a2b3]">活动/折扣优惠金额</p><p className="mt-1 font-semibold text-[#d85b18]">-¥ {formatMoney(discountAmount)}</p></div>
+              <div><p className="text-xs text-[#98a2b3]">实付金额</p><p className="mt-1 font-semibold text-[#1d2939]">¥ {formatMoney(paidAmount)}</p></div>
+              <div><p className="text-xs text-[#98a2b3]">付款方式</p><p className="mt-1 font-semibold text-[#1d2939]">富友</p></div>
+              <div><p className="text-xs text-[#98a2b3]">付款时间</p><p className="mt-1 whitespace-nowrap font-semibold text-[#1d2939]">2026-07-12 12:00</p></div>
+            </div>
+          </div>
+        </section>
+        <section>
+          <h3 className="mb-3 font-semibold text-[#1d2939]">退款申请信息</h3>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">类型</p><p className="mt-1 font-medium text-[#344054]">{applicationType}</p></div>
+            <div className="rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">办理校区</p><p className="mt-1 font-medium text-[#344054]">{item.campus}</p></div>
+            <div className="rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">退课原因</p><p className="mt-1 font-medium text-[#344054]">{applicationType === "退课" ? detail.reason : "--"}</p></div>
+            <div className="rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">退款金额</p><p className="mt-1 font-semibold text-[#d85b18]">¥ {formatMoney(item.amount)}</p></div>
+            <div className="col-span-2 rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">退款说明</p><p className="mt-1 leading-6 text-[#344054]">{detail.description}</p></div>
+            <div className="col-span-2 rounded-xl border border-[#edf0f4] p-4">
+              <p className="text-xs text-[#98a2b3]">退款方式</p>
+              <p className="mt-1 font-medium text-[#344054]">{item.refundMethod}</p>
+              {detail.bankInfo && <div className="mt-3 grid grid-cols-3 gap-3 rounded-lg bg-[#f8fafc] p-3 text-xs leading-5 text-[#667085]"><span>户名：{detail.bankInfo.accountName}</span><span>卡号：{detail.bankInfo.cardNo}</span><span>开户行：{detail.bankInfo.bankName}</span></div>}
+            </div>
+          </div>
         </section>
         <section className="rounded-xl border border-[#e5e9f0] p-5">
-          <div className="flex items-center justify-between"><h3 className="font-semibold text-[#344054]">审批流程明细</h3><span className="text-xs text-[#98a2b3]">共 {approvalSteps.length} 个节点</span></div>
+          <div className="flex items-center justify-between"><h3 className="font-semibold text-[#344054]">审批流程</h3><span className="text-xs text-[#98a2b3]">共 {approvalSteps.length} 个节点</span></div>
           <div className="mt-5 space-y-0">{approvalSteps.map((step, stepIndex) => <div key={step.title} className="relative flex gap-4 pb-6 last:pb-0">
             {stepIndex < approvalSteps.length - 1 && <span className="absolute left-[7px] top-4 h-full w-px bg-[#dbe3ef]" />}
             <span className={`relative z-[1] mt-1 h-4 w-4 shrink-0 rounded-full border-4 border-white ${step.tone === "rejected" ? "bg-[#d92d20]" : step.tone === "pending" ? "bg-[#f79009]" : "bg-[#12b76a]"}`} />
             <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-3"><p className="font-medium text-[#344054]">{step.title}</p><span className={`text-xs ${step.tone === "rejected" ? "text-[#d92d20]" : step.tone === "pending" ? "text-[#b54708]" : "text-[#027a48]"}`}>{step.label}</span></div><p className="mt-1 text-sm text-[#667085]">{step.person}</p><p className="mt-1 text-xs text-[#98a2b3]">{step.time}</p>{step.tone === "rejected" && <p className="mt-2 rounded-lg bg-[#fff5f5] px-3 py-2 text-xs leading-5 text-[#b42318]">驳回原因：{item.rejectReason || "未填写"}</p>}</div>
           </div>)}</div>
         </section>
-        <section className="grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">申请类型</p><p className="mt-1 text-[#344054]">{detail.type}</p></div>
-          <div className="rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">退课/退费场景</p><p className="mt-1 text-[#344054]">{detail.sceneLabel}</p></div>
-          <div className="rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">退款方式</p><p className="mt-1 text-[#344054]">{item.refundMethod}</p>{detail.bankInfo && <p className="mt-2 text-xs leading-5 text-[#667085]">户名：{detail.bankInfo.accountName}<br />卡号：{detail.bankInfo.cardNo}<br />开户行：{detail.bankInfo.bankName}</p>}</div>
-          <div className="rounded-xl border border-[#edf0f4] p-4"><p className="text-xs text-[#98a2b3]">退款金额</p><p className="mt-1 font-semibold text-[#d85b18]">¥ {formatMoney(item.amount)}</p></div>
-        </section>
-        <section className="rounded-xl border border-[#edf0f4] p-4 text-sm"><p className="font-semibold text-[#344054]">申请信息</p><div className="mt-3 grid grid-cols-2 gap-y-3 text-[#667085]"><span>申请人：{item.applicant}</span><span>申请时间：{item.submitTime}</span><span>办理校区：{item.campus}</span><span>退课课次：{detail.lessons}</span><span>关联班级：{detail.className}</span><span>班级属性：{detail.classAttribute}</span></div></section>
-        <section className="rounded-xl border border-[#edf0f4] p-4 text-sm"><p className="font-semibold text-[#344054]">申请说明</p><p className="mt-2 leading-6 text-[#667085]">{detail.description}</p></section>
       </div>
-      <footer className="flex justify-end border-t border-[#e5e9f0] px-6 py-4"><button onClick={onClose} className="rounded-lg bg-[#18234b] px-5 py-2.5 text-sm font-semibold text-white">关闭</button></footer>
+      <footer className="flex justify-end gap-3 border-t border-[#e5e9f0] px-6 py-4">
+        {onReject && onApprove ? <>
+          <button onClick={onReject} className="rounded-lg bg-[#d92d20] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#b42318]">拒绝</button>
+          <button onClick={onApprove} className="rounded-lg bg-[#027a48] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#05603a]">通过</button>
+        </> : <button onClick={onClose} className="rounded-lg bg-[#18234b] px-5 py-2.5 text-sm font-semibold text-white">关闭</button>}
+      </footer>
     </aside>
   </div>;
 }
@@ -188,8 +224,9 @@ function getPromotionDetails(item: ApprovalApplication) {
 }
 
 function AmountDetailDrawer({ item, onClose }: { item: ApprovalApplication; onClose: () => void }) {
-  if ((item as ApprovalApplication & { __openApprovalDetail?: boolean }).__openApprovalDetail) {
-    return <ApprovalDetailDrawer item={item} index={0} onClose={onClose} />;
+  const approvalDrawerItem = item as ApprovalApplication & { __openApprovalDetail?: boolean; __approvalIndex?: number; __onReject?: () => void; __onApprove?: () => void };
+  if (approvalDrawerItem.__openApprovalDetail) {
+    return <ApprovalDetailDrawer item={item} index={approvalDrawerItem.__approvalIndex ?? 0} onClose={onClose} onReject={approvalDrawerItem.__onReject} onApprove={approvalDrawerItem.__onApprove} />;
   }
   const approvalDetail = getStudentDetails(item, 0);
   const type = approvalDetail.type;
@@ -391,16 +428,31 @@ export function RefundApprovalTablePageV3({ applications, activeTab, onBack, onC
     setBatchMode(false);
   }, [activeTab]);
   useEffect(() => {
+    if (activeTab !== "pending") return;
     const handleApplicationIdClick = (event: Event) => {
       const button = (event.target as HTMLElement).closest("button");
       const application = button ? filtered.find(({ item }) => item.id === button.textContent?.trim()) : undefined;
       if (!application) return;
       event.preventDefault();
       event.stopPropagation();
-      setAmountItem({ ...application.item, __openApprovalDetail: true } as ApprovalApplication);
+      setAmountItem({
+        ...application.item,
+        __openApprovalDetail: true,
+        __approvalIndex: application.index,
+        __onReject: () => {
+          setAmountItem(null);
+          setConfirmAction({ item: application.item, index: application.index, action: "rejected" });
+        },
+        __onApprove: () => {
+          setAmountItem(null);
+          setConfirmAction({ item: application.item, index: application.index, action: "processing" });
+        },
+      } as ApprovalApplication);
       setDetailItem(null);
     };
     document.addEventListener("click", handleApplicationIdClick, true);
+    const applicationSearchInput = document.querySelector<HTMLInputElement>('input[placeholder="搜索申请编号"]');
+    if (applicationSearchInput) applicationSearchInput.placeholder = "搜索审批编号";
     const lessonHeader = Array.from(document.querySelectorAll("th")).find((header) => header.textContent?.trim() === "退课课次");
     const lessonIndex = lessonHeader?.parentElement ? Array.from(lessonHeader.parentElement.children).indexOf(lessonHeader) + 1 : 0;
     const lessonCells = lessonIndex ? Array.from(document.querySelectorAll(`table tr > *:nth-child(${lessonIndex})`)) : [];
@@ -408,6 +460,8 @@ export function RefundApprovalTablePageV3({ applications, activeTab, onBack, onC
     const classHeader = Array.from(document.querySelectorAll("th")).find((header) => header.textContent?.trim() === "关联班级");
     const classIndex = classHeader?.parentElement ? Array.from(classHeader.parentElement.children).indexOf(classHeader) : -1;
     const insertedOrderNodes: HTMLElement[] = [];
+    const hiddenActionNodes: HTMLElement[] = [];
+    const insertedActionNodes: HTMLElement[] = [];
     if (classIndex >= 0 && classHeader) {
       const orderHeader = document.createElement("th");
       orderHeader.textContent = "关联订单编号";
@@ -429,12 +483,52 @@ export function RefundApprovalTablePageV3({ applications, activeTab, onBack, onC
         insertedOrderNodes.push(orderCell);
       });
     }
+    const actionHeader = Array.from(document.querySelectorAll("th")).find((header) => header.textContent?.trim() === "操作");
+    const actionIndex = actionHeader?.parentElement ? Array.from(actionHeader.parentElement.children).indexOf(actionHeader) : -1;
+    if (actionIndex >= 0 && actionHeader) {
+      Array.from(actionHeader.closest("table")?.querySelectorAll("tbody tr") ?? []).forEach((row) => {
+        const actionCell = row.children[actionIndex] as HTMLElement | undefined;
+        const applicationId = row.querySelector("td:first-child button")?.textContent?.trim() ?? "";
+        const application = filtered.find(({ item }) => item.id === applicationId);
+        if (!actionCell || !application) return;
+        Array.from(actionCell.children).forEach((node) => {
+          const element = node as HTMLElement;
+          element.style.display = "none";
+          hiddenActionNodes.push(element);
+        });
+        const processButton = document.createElement("button");
+        processButton.type = "button";
+        processButton.textContent = "去处理";
+        processButton.className = "font-medium text-[#165dff] hover:underline";
+        processButton.onclick = () => {
+          setAmountItem({
+            ...application.item,
+            __openApprovalDetail: true,
+            __approvalIndex: application.index,
+            __onReject: () => {
+              setAmountItem(null);
+              setConfirmAction({ item: application.item, index: application.index, action: "rejected" });
+            },
+            __onApprove: () => {
+              setAmountItem(null);
+              setConfirmAction({ item: application.item, index: application.index, action: "processing" });
+            },
+          } as ApprovalApplication);
+          setDetailItem(null);
+        };
+        actionCell.appendChild(processButton);
+        insertedActionNodes.push(processButton);
+      });
+    }
     return () => {
       document.removeEventListener("click", handleApplicationIdClick, true);
+      if (applicationSearchInput) applicationSearchInput.placeholder = "搜索申请编号";
       lessonCells.forEach((cell) => ((cell as HTMLElement).style.display = ""));
       insertedOrderNodes.forEach((node) => node.remove());
+      hiddenActionNodes.forEach((node) => (node.style.display = ""));
+      insertedActionNodes.forEach((node) => node.remove());
     };
-  }, [filtered]);
+  }, [activeTab, filtered]);
   useEffect(() => {
     if (activeTab !== "pending") return;
     const main = document.querySelector("main");
@@ -627,6 +721,37 @@ export function RefundApprovalTablePageV3({ applications, activeTab, onBack, onC
     selectedIds.join(","),
     onBatchUpdateStatus,
   ]);
-  const headers = ["申请编号", "学员信息", "申请类型", "退课/退费场景", "退款金额", "退款方式", "申请说明", "退课课次", "关联班级", "办理校区", "申请人", "申请时间", ...(rejectedTab ? ["驳回原因", "驳回时间", "驳回人姓名"] : []), "操作"];
+  const headers = ["审批编号", "学员信息", "申请类型", "退课/退费场景", "退款金额", "退款方式", "申请说明", "退课课次", "关联班级", "办理校区", "申请人", "申请时间", ...(rejectedTab ? ["驳回原因", "驳回时间", "驳回人姓名"] : []), "操作"];
+  if (activeTab !== "pending") {
+    return (
+      <main className="min-h-screen bg-[#f5f7fb] px-2 py-5 text-[#182230] sm:px-3 lg:px-4">
+        <div className="mx-auto max-w-[1900px] space-y-4">
+          <header className="flex items-center justify-between rounded-2xl border border-[#e5e9f0] bg-white px-5 py-4 shadow-sm">
+            <h1 className="text-2xl font-semibold text-[#1d2939]">财务退款审批</h1>
+            <button onClick={onBack} className="rounded-lg border border-[#dbe3ef] px-4 py-2 text-sm font-semibold text-[#667085]">
+              返回首页
+            </button>
+          </header>
+          <section className="overflow-hidden rounded-2xl border border-[#e5e9f0] bg-white shadow-sm">
+            <div className="flex items-center gap-6 border-b border-[#e5e9f0] px-5 pt-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => onChangeTab(tab.id)}
+                  className={`border-b-2 px-1 py-4 text-sm font-semibold ${activeTab === tab.id ? "border-[#165dff] text-[#165dff]" : "border-transparent text-[#667085]"}`}
+                >
+                  {tab.label}
+                  {tab.id !== "completed" && <span className="ml-1 text-xs">({tabCounts[tab.id]})</span>}
+                </button>
+              ))}
+            </div>
+            <div className="flex min-h-[360px] items-center justify-center px-6 py-16 text-center text-base text-[#667085]">
+              和目前教务系统内退款列表保持一致，暂不修改
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
   return <main className="min-h-screen bg-[#f5f7fb] px-2 py-5 text-[#182230] sm:px-3 lg:px-4"><div className="mx-auto max-w-[1900px] space-y-4"><header className="flex items-center justify-between rounded-2xl border border-[#e5e9f0] bg-white px-5 py-4 shadow-sm"><h1 className="text-2xl font-semibold text-[#1d2939]">财务退款审批</h1><button onClick={onBack} className="rounded-lg border border-[#dbe3ef] px-4 py-2 text-sm font-semibold text-[#667085]">返回首页</button></header><section className="overflow-hidden rounded-2xl border border-[#e5e9f0] bg-white shadow-sm"><div className="flex items-center gap-6 border-b border-[#e5e9f0] px-5 pt-2">{tabs.map((tab) => <button key={tab.id} onClick={() => onChangeTab(tab.id)} className={`border-b-2 px-1 py-4 text-sm font-semibold ${activeTab === tab.id ? "border-[#165dff] text-[#165dff]" : "border-transparent text-[#667085]"}`}>{tab.label}{tab.id !== "completed" && <span className="ml-1 text-xs">({tabCounts[tab.id]})</span>}</button>)}</div><div className="flex flex-wrap gap-3 border-b border-[#edf0f4] bg-[#fbfcff] p-4"><input value={applicationSearch} onChange={(event) => setApplicationSearch(event.target.value)} placeholder="搜索申请编号" className="h-10 w-44 rounded-lg border border-[#dbe3ef] px-3 text-sm outline-none focus:border-[#165dff]" /><input value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} placeholder="搜索学员姓名、学号、手机号" className="h-10 w-60 rounded-lg border border-[#dbe3ef] px-3 text-sm outline-none focus:border-[#165dff]" /><input value={teacherSearch} onChange={(event) => setTeacherSearch(event.target.value)} placeholder="搜索老师姓名" className="h-10 w-44 rounded-lg border border-[#dbe3ef] px-3 text-sm outline-none focus:border-[#165dff]" /><select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部年度</option><option>2026</option><option>2025</option></select><select value={quarterFilter} onChange={(event) => setQuarterFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部季度</option><option>春季</option><option>暑假</option><option>秋季</option></select><select value={gradeFilter} onChange={(event) => setGradeFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部年级</option>{grades.map((grade) => <option key={grade}>{grade}</option>)}</select><select value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部学科</option>{subjects.map((subject) => <option key={subject}>{subject}</option>)}</select><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部申请类型</option><option>特殊退课</option><option>特殊退费</option></select><select value={scenarioFilter} onChange={(event) => setScenarioFilter(event.target.value)} className="h-10 min-w-44 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部退课/退费场景</option><option value="单次课退课">单次课退课</option><option value="已下课课次退课">已下课课次退课</option>{scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.label}</option>)}</select><select value={refundMethodFilter} onChange={(event) => setRefundMethodFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部退款方式</option>{methods.map((method) => <option key={method}>{method}</option>)}</select><select value={campusFilter} onChange={(event) => setCampusFilter(event.target.value)} className="h-10 rounded-lg border border-[#dbe3ef] bg-white px-3 text-sm"><option value="all">全部办理校区</option>{campuses.map((campus) => <option key={campus}>{campus}</option>)}</select><span className="ml-auto self-center text-sm text-[#667085]">共 {filtered.length} 条</span></div><div className="overflow-x-auto"><table className="min-w-[2300px] w-full border-collapse text-sm"><thead className="bg-[#f8fafc] text-left text-[#667085]"><tr>{headers.map((title, index) => <th key={title} className={`whitespace-nowrap border-b border-[#e5e9f0] px-4 py-3 font-medium ${index === 0 ? "sticky left-0 z-20 bg-[#f8fafc]" : index === 1 ? "sticky left-[150px] z-20 bg-[#f8fafc]" : ""}`}>{title}</th>)}</tr></thead><tbody>{filtered.map(({ item, index, detail }) => <tr key={item.id} className="border-b border-[#edf0f4] align-top hover:bg-[#fbfcff]"><td className="sticky left-0 z-10 w-[150px] whitespace-nowrap bg-white px-4 py-5 shadow-[3px_0_6px_rgba(15,23,42,0.03)]"><button onClick={() => setAmountItem(item)} className="font-medium text-[#165dff] hover:underline">{item.id}</button></td><td className="sticky left-[150px] z-10 whitespace-nowrap bg-white px-4 py-5 shadow-[4px_0_8px_rgba(15,23,42,0.04)]"><div className="font-medium text-[#344054]">{detail.name}</div><div className="mt-1 text-xs text-[#667085]">{detail.studentNo}</div><div className="mt-1 text-xs text-[#667085]">{detail.phone}</div></td><td className="px-4 py-5 text-[#344054]">{detail.type}</td><td className="whitespace-nowrap px-4 py-5 text-[#344054]">{detail.sceneLabel}</td><td className="whitespace-nowrap px-4 py-5"><button onClick={() => setAmountItem(item)} className="inline-flex items-center gap-1 font-semibold text-[#d85b18] hover:underline">¥ {formatMoney(item.amount)}<CircleHelp size={15} className="text-[#98a2b3]" /></button></td><td className="whitespace-nowrap px-4 py-5 text-[#344054]">{item.refundMethod}{detail.bankInfo && <div className="mt-2 space-y-1 text-xs leading-5 text-[#667085]"><div>户名：{detail.bankInfo.accountName}</div><div>卡号：{detail.bankInfo.cardNo}</div><div>开户行：{detail.bankInfo.bankName}</div></div>}</td><td className="min-w-56 max-w-72 px-4 py-5 leading-6 text-[#667085]">{detail.description}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{detail.lessons}</td><td className="min-w-64 px-4 py-5 text-[#667085]"><div>{detail.className}</div><div className="mt-1 text-xs text-[#98a2b3]">{detail.classAttribute}</div></td><td className="px-4 py-5 text-[#667085]">{item.campus}</td><td className="px-4 py-5 text-[#667085]">{item.applicant}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{item.submitTime}</td>{rejectedTab && <><td className="px-4 py-5 text-[#b42318]">{item.rejectReason || "未填写"}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{item.completedTime || "--"}</td><td className="whitespace-nowrap px-4 py-5 text-[#667085]">{item.approver || "--"}</td></>}{<td className="whitespace-nowrap px-4 py-5">{item.status === "pending" ? <><button onClick={() => setConfirmAction({ item, action: "processing" })} className="mr-3 font-medium text-[#027a48] hover:underline">通过</button><button onClick={() => setConfirmAction({ item, action: "rejected" })} className="font-medium text-[#d92d20] hover:underline">驳回</button></> : <span className="text-[#98a2b3]">--</span>}</td>}</tr>)}</tbody></table>{!filtered.length && <div className="px-6 py-16 text-center text-sm text-[#667085]">当前筛选条件下没有申请记录</div>}</div></section></div>{amountItem && <AmountDetailDrawer item={amountItem} onClose={() => setAmountItem(null)} />}{confirmAction && <ConfirmActionDialog item={confirmAction.item} action={confirmAction.action} onCancel={() => setConfirmAction(null)} onConfirm={() => { onUpdateStatus(confirmAction.item.id, confirmAction.action); setConfirmAction(null); }} />}</main>;
 }
