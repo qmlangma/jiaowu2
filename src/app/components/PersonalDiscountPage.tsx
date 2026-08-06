@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { CalendarDays, Check, ChevronDown, FileText, Plus, Upload, Users, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { CalendarDays, Check, ChevronDown, Download, FileText, Plus, Upload, Users, X } from "lucide-react";
 
 type DiscountStatus = "启用中" | "已停用";
 type RefundRule = "按折扣价退费" | "按原价退费";
@@ -74,8 +74,21 @@ function StudentLookup({ form, setForm }: { form: StudentDiscount; setForm: Reac
   return <div className="space-y-3"><span className="block text-sm font-semibold text-[#344054]">选择学员 <em className="text-[#c84d3c]">*</em></span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索姓名、学号或手机号" className="h-11 w-full rounded-lg border border-[#dbe3ef] px-3 text-sm outline-none focus:border-[#165dff]" />{query && <div className="max-h-40 overflow-y-auto rounded-lg border border-[#e5e9f0]">{matches.map((item) => <button key={item.studentNo} type="button" onClick={() => { setForm((current) => ({ ...current, name: item.name, studentNo: item.studentNo, phone: item.phone })); setQuery(`${item.name} ${item.studentNo}`); }} className="flex w-full items-center justify-between border-b border-[#edf0f4] px-3 py-2.5 text-left text-sm last:border-0 hover:bg-[#f8fafc]"><span className="font-medium text-[#344054]">{item.name}</span><span className="text-[#667085]">{item.studentNo} · {item.phone}</span></button>)}{!matches.length && <p className="px-3 py-3 text-sm text-[#98a2b3]">未找到匹配学员</p>}</div>}{form.name && <div className="rounded-lg bg-[#eef4ff] px-3 py-2 text-sm text-[#344054]">已选择：{form.name}（{form.studentNo}，{form.phone}）</div>}</div>;
 }
 
-function BatchStudentUpload() {
-  return <div className="rounded-xl border border-dashed border-[#b9c8e5] bg-[#f8fafc] px-6 py-6"><p className="text-sm font-semibold text-[#344054]">批量导入学员</p><p className="mt-1 text-xs text-[#98a2b3]">仅学员信息通过文件批量导入，其他折扣配置与手动选择学员一致。</p><div className="mt-4 flex items-center gap-3"><button type="button" className="inline-flex items-center gap-2 rounded-lg border border-[#b9c8e5] px-4 py-2 text-sm font-semibold text-[#165dff]"><Upload size={16} />选择文件</button><span className="text-xs text-[#667085]">支持 .xlsx、.xls</span></div></div>;
+function BatchStudentUpload({ ruleId }: { ruleId: number | null }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileName, setFileName] = useState("");
+  const [showRuleToast, setShowRuleToast] = useState(false);
+
+  const chooseFile = () => {
+    if (ruleId === null) {
+      setShowRuleToast(true);
+      window.setTimeout(() => setShowRuleToast(false), 1800);
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
+  return <><div className="rounded-xl border border-dashed border-[#b9c8e5] bg-[#f8fafc] px-6 py-6"><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold text-[#344054]">批量导入学员</p><p className="mt-1 text-xs text-[#98a2b3]">仅学员信息通过文件批量导入，其他折扣配置与手动选择学员一致。</p></div><a href="/templates/student-discount-import-template.xlsx" download="学员折扣批量导入示例模板.xlsx" className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[#b9c8e5] bg-white px-4 py-2 text-sm font-semibold text-[#165dff] hover:border-[#165dff] hover:bg-[#eef4ff]"><Download size={16} />下载示例模板</a></div><input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")} /><div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={chooseFile} className="inline-flex items-center gap-2 rounded-lg border border-[#b9c8e5] px-4 py-2 text-sm font-semibold text-[#165dff]"><Upload size={16} />选择文件</button>{fileName && <span className="text-xs text-[#667085]">已选择：{fileName}</span>}</div></div>{showRuleToast && <div role="status" aria-live="polite" className="fixed bottom-8 left-1/2 z-[110] -translate-x-1/2 rounded-lg bg-[#101828] px-4 py-2.5 text-sm font-medium text-white shadow-xl">请先选择折扣规则</div>}</>;
 }
 
 function StudentDiscountFields({ form, setForm, rules }: { form: StudentDiscount; setForm: React.Dispatch<React.SetStateAction<StudentDiscount>>; rules: DiscountRule[] }) {
@@ -168,7 +181,7 @@ export function StudentDrawerV2({ student, rules, onSave, onClose }: { student: 
         <button type="button" onClick={() => setMode("manual")} className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold ${mode === "manual" ? "bg-white text-[#165dff] shadow-sm" : "text-[#667085]"}`}>手动选择学员</button>
         <button type="button" onClick={() => setMode("batch")} className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold ${mode === "batch" ? "bg-white text-[#165dff] shadow-sm" : "text-[#667085]"}`}>批量导入学员</button>
       </div>
-      {mode === "batch" ? <BatchStudentUpload /> : <StudentLookup form={form} setForm={setForm} />}
+      {mode === "batch" ? <BatchStudentUpload ruleId={form.ruleId} /> : <StudentLookup form={form} setForm={setForm} />}
       <div className="relative"><button type="button" onClick={() => setNewRuleDrawer(null)} className="absolute right-0 top-0 z-10 rounded-lg border border-[#165dff] px-3 py-1.5 text-xs font-semibold text-[#165dff] hover:bg-[#eef4ff]">新建折扣规则</button><StudentDiscountFieldsScope form={form} setForm={setForm} rules={availableRules} /></div>
     </div>
   </DrawerShell>{newRuleDrawer !== undefined && <RuleDrawer rule={newRuleDrawer} onSave={saveNewRule} onClose={() => setNewRuleDrawer(undefined)} />}</>;
