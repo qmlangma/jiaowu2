@@ -457,7 +457,7 @@ export default function App() {
   const isOriginalPriceRefund = scenario === "discount_original";
   const paymentMethod = hasDiscount ? "富友" : "现金支付";
   const isCashPayment = paymentMethod === "现金支付";
-  const hasCashPaymentDiscount = isCashPayment && !(currentDemoKind === "operations" && scenario === "standard");
+  const hasCashPaymentDiscount = scenario === "discount_activity";
   const cashPaymentDiscountAmount = hasCashPaymentDiscount ? cashPaymentGlobalDiscount : 0;
   const isOperationsCashPayment = currentDemoKind === "operations" && isCashPayment;
   const canEditRefundMethod = currentDemoKind === "finance" || isOperationsCashPayment;
@@ -490,7 +490,8 @@ export default function App() {
   const onlineLessons = lessons.filter((lesson) => lesson.delivery === "online");
   const completedOnlineLessons = onlineLessons.filter((lesson) => lesson.state === "completed");
   const completedLessons = lessons.filter((lesson) => lesson.state === "completed");
-  const actualPaidAmount = hasDiscount ? 1575 : 3150 - cashPaymentDiscountAmount;
+  const activityDiscountAmount = hasDiscount ? 1575 : 0;
+  const actualPaidAmount = 3150 - activityDiscountAmount - cashPaymentDiscountAmount;
   const orderInfoGridCols = hasCashPaymentDiscount ? "sm:grid-cols-6" : "sm:grid-cols-5";
   const specialScenarioLessons =
     specialScenario === "online_rebate"
@@ -500,7 +501,7 @@ export default function App() {
         }))
       : lessons;
   const getCashPaymentDiscountForLesson = (lessonId: number) => {
-    if (!isCashPayment || lessons.length === 0) return 0;
+    if (!hasCashPaymentDiscount || lessons.length === 0) return 0;
     const totalDiscountCents = Math.round(cashPaymentDiscountAmount * 100);
     const regularLessonDiscountCents = Math.floor(totalDiscountCents / lessons.length);
     const regularLessonCount = lessons.length - 1;
@@ -526,10 +527,12 @@ export default function App() {
     if (lessonId === ORIGINAL_PRICE_REFUND_TRANSITION_LESSON) return ORIGINAL_PRICE_REFUND_TRANSITION_AMOUNT;
     return 0;
   };
-  const refundUnitAmount = isOriginalPriceRefund || !hasDiscount ? ORIGINAL_PRICE : 105;
   const refundAmount = isOriginalPriceRefund
     ? selectedLessons.reduce((sum, lessonId) => sum + getOriginalPriceRefundLessonPaid(lessonId), 0)
-    : selectedLessons.length * refundUnitAmount;
+    : selectedLessons.reduce((sum, lessonId) => {
+        const lesson = withdrawLessons.find((item) => item.id === lessonId);
+        return lesson ? sum + getCurrentLessonPaidAmount(lesson) : sum;
+      }, 0);
   const detailLessons = withdrawLessons;
   const selectedDetailLessons = selectedLessons.length ? detailLessons.filter((lesson) => selectedLessons.includes(lesson.id)) : [];
   const visibleDetailLessons = showAllLessonRows || !selectedLessons.length ? detailLessons : selectedDetailLessons;
@@ -1244,7 +1247,7 @@ export default function App() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8">
-          <section className="mb-7"><SectionTitle icon={FileText}>订单信息</SectionTitle><div className="rounded-xl border border-[#e7ebf2] bg-white p-4"><div className="flex flex-col gap-4 border-b border-[#edf0f4] pb-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs text-[#98a2b3]">班级名称</p><p className="mt-1 text-sm font-medium leading-6 text-[#344054]">【暑假】一年级信息学算法一期 · 上午小星星柏悦中心</p></div><div className="shrink-0 sm:text-right"><p className="text-xs text-[#98a2b3]">所购课次</p><p className="mt-1 text-sm font-semibold text-[#344054]">1–15</p></div></div><div className={`grid grid-cols-2 gap-x-4 gap-y-3 pt-4 text-sm ${orderInfoGridCols}`}><div><p className="text-xs text-[#98a2b3]">课程总价</p><p className="mt-1 font-semibold">¥ 3,150.00</p></div><div><p className="whitespace-nowrap text-xs text-[#98a2b3]">活动/折扣优惠金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">-¥ {hasDiscount ? "1,575.00" : "0.00"}</p>{hasDiscount && <button onClick={() => setDetailView("discount")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看优惠说明"><CircleHelp size={15} /></button>}</div></div>{hasCashPaymentDiscount && <div><p className="text-xs text-[#98a2b3]">现金支付优惠</p><p className="mt-1 font-semibold text-[#d85b18]">-¥ {formatMoney(cashPaymentDiscountAmount)}</p></div>}<div><p className="text-xs text-[#98a2b3]">实付金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">¥ {hasDiscount ? "1,575.00" : formatMoney(actualPaidAmount)}</p><button onClick={() => setDetailView("paid")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看实付金额明细"><CircleHelp size={15} /></button></div></div><div><p className="text-xs text-[#98a2b3]">付款方式</p><p className="mt-1 font-semibold">{paymentMethod}</p></div><div className="min-w-[120px]"><p className="whitespace-nowrap text-xs text-[#98a2b3]">付款时间</p><p className="mt-1 whitespace-nowrap text-sm font-semibold text-[#344054]">2026-07-12 12:00</p></div></div></div></section>
+          <section className="mb-7"><SectionTitle icon={FileText}>订单信息</SectionTitle><div className="rounded-xl border border-[#e7ebf2] bg-white p-4"><div className="flex flex-col gap-4 border-b border-[#edf0f4] pb-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs text-[#98a2b3]">班级名称</p><p className="mt-1 text-sm font-medium leading-6 text-[#344054]">【暑假】一年级信息学算法一期 · 上午小星星柏悦中心</p></div><div className="shrink-0 sm:text-right"><p className="text-xs text-[#98a2b3]">所购课次</p><p className="mt-1 text-sm font-semibold text-[#344054]">1–15</p></div></div><div className={`grid grid-cols-2 gap-x-4 gap-y-3 pt-4 text-sm ${orderInfoGridCols}`}><div><p className="text-xs text-[#98a2b3]">课程总价</p><p className="mt-1 font-semibold">¥ 3,150.00</p></div><div><p className="whitespace-nowrap text-xs text-[#98a2b3]">活动/折扣优惠金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">-¥ {formatMoney(activityDiscountAmount)}</p>{hasDiscount && <button onClick={() => setDetailView("discount")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看优惠说明"><CircleHelp size={15} /></button>}</div></div>{hasCashPaymentDiscount && <div><p className="text-xs text-[#98a2b3]">现金支付优惠</p><p className="mt-1 font-semibold text-[#d85b18]">-¥ {formatMoney(cashPaymentDiscountAmount)}</p></div>}<div><p className="text-xs text-[#98a2b3]">实付金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">¥ {formatMoney(actualPaidAmount)}</p><button onClick={() => setDetailView("paid")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看实付金额明细"><CircleHelp size={15} /></button></div></div><div><p className="text-xs text-[#98a2b3]">付款方式</p><p className="mt-1 font-semibold">{paymentMethod}</p></div><div className="min-w-[120px]"><p className="whitespace-nowrap text-xs text-[#98a2b3]">付款时间</p><p className="mt-1 whitespace-nowrap text-sm font-semibold text-[#344054]">2026-07-12 12:00</p></div></div></div></section>
 
               <section><SectionTitle icon={CreditCard}>{mode === "withdraw" ? "退课申请" : "退款申请"}</SectionTitle><div className="rounded-xl bg-[#f8fafc] p-4 sm:p-5">{mode === "withdraw" && <div className="mb-4 space-y-2"><span className="block text-sm font-medium text-[#344054]">退课原因</span><div className="relative"><select value={reason} onChange={(event) => setReason(event.target.value)} className="h-11 w-full appearance-none rounded-lg border border-[#e4e7ec] bg-white px-3 text-sm text-[#344054] outline-none transition focus:border-[#1668d8] focus:ring-4 focus:ring-[#1668d8]/10"><option value="" disabled>请选择退课原因</option><option>时间冲突</option><option>距离冲突</option><option>教师问题</option><option>课程问题</option><option>退费重报</option><option value="业务办理错误">业务办理错误 [不计算三率]</option><option>其他</option></select><ChevronDown className="pointer-events-none absolute right-3 top-3 text-[#667085]" size={17} /></div></div>}<div className="mb-6 space-y-2"><span className="block text-sm font-medium text-[#344054]">退款说明</span><textarea className="min-h-20 w-full resize-none rounded-lg border border-[#e4e7ec] bg-white px-3 py-3 text-sm outline-none transition placeholder:text-[#98a2b3] focus:border-[#1668d8] focus:ring-4 focus:ring-[#1668d8]/10" placeholder="请选择退款说明" /></div>
                 {mode === "withdraw" && <div><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold text-[#344054]">{withdrawLessonSelectionTitle}</p><p className="text-xs text-[#667085]">{selectedLessons.length ? `已选择 ${selectedLessons.length} 节` : withdrawLessonSelectionHint}</p></div><div className="grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-9">{withdrawLessons.map((lesson) => { const isSelected = selectedLessons.includes(lesson.id); const isCompleted = lesson.state === "completed"; const isInProgress = lesson.state === "in_progress"; const isRefunded = lesson.state === "refunded"; const isLockedOperationsLesson = currentDemoKind === "operations" && lesson.state === "selectable"; const isDisabled = isLockedOperationsLesson || (withdrawSelectionMode === "range" ? lesson.state !== "selectable" : isRefunded); return <button key={lesson.id} onClick={() => toggleWithdrawLesson(lesson.id)} disabled={isDisabled} className={`relative flex h-14 flex-col items-center justify-center rounded-lg text-sm font-semibold transition ${isSelected ? `${isLockedOperationsLesson ? "cursor-not-allowed " : ""}bg-[#1668d8] text-white shadow-[0_6px_12px_rgba(22,104,216,0.18)]` : isDisabled ? "cursor-not-allowed bg-[#eaecf0] text-[#98a2b3]" : "bg-white text-[#475467] ring-1 ring-[#d0d5dd] hover:ring-[#1668d8] hover:text-[#1668d8]"}`}><span className="absolute top-1.5 text-[9px] font-medium opacity-80">{isCompleted ? "已下课" : isInProgress ? "上课中" : isRefunded ? "已退课" : isSelected ? "退课" : "可退"}</span><span className="mt-3">{lesson.id}</span>{isSelected && <Check className="absolute right-1.5 top-1.5" size={12} strokeWidth={3} />}</button>; })}</div></div>}
@@ -1658,7 +1661,7 @@ export default function App() {
                           const lessonDiscount = getLessonDiscount(lesson);
                           const lessonActualPaid = ORIGINAL_PRICE - lessonDiscount;
                           const lessonRefundedAmount = refunded ? lessonActualPaid : 0;
-                          const lessonRefundableAmount = Math.max(lessonActualPaid - consumedAmount - lessonRefundedAmount, 0);
+                          const lessonRefundableAmount = Math.max(lessonActualPaid - lessonRefundedAmount, 0);
                           const lessonStatus = lesson.state === "completed" ? "已下课" : refunded ? "已退款" : "未上课";
                           return (
                             <tr key={lesson.id} className={lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}>
@@ -1729,7 +1732,7 @@ export default function App() {
                           const lessonDiscount = getLessonDiscount(lesson);
                           const lessonActualPaid = ORIGINAL_PRICE - lessonDiscount;
                           const lessonRefundedAmount = refunded ? lessonActualPaid : 0;
-                          const lessonRefundableAmount = Math.max(lessonActualPaid - consumedAmount - lessonRefundedAmount, 0);
+                          const lessonRefundableAmount = Math.max(lessonActualPaid - lessonRefundedAmount, 0);
                           const lessonStatus = lesson.state === "completed" ? "已下课" : refunded ? "已退款" : "未上课";
                           return (
                             <tr key={lesson.id} className={lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}>
@@ -1952,7 +1955,7 @@ export default function App() {
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#5e3315]">
                     <span>所选 {specialSelectedLessonIds.length} 节</span>
                     <span className="text-[#c59b7c]">×</span>
-                    <span>{hasDiscount ? "单课次实付金额 ¥105.00" : "单课次实付金额 ¥210.00"}</span>
+                    <span>{hasCashPaymentDiscount ? "按所选课次实付金额合计" : hasDiscount ? "单课次实付金额 ¥105.00" : "单课次实付金额 ¥210.00"}</span>
                     <span className="text-[#c59b7c]">=</span>
                     <strong className="text-[#d85b18]">退款 ¥{specialRefundAmount.toLocaleString()}</strong>
                   </div>
@@ -2000,7 +2003,7 @@ export default function App() {
                             const lessonDiscount = getLessonDiscount(lesson);
                             const lessonActualPaid = ORIGINAL_PRICE - lessonDiscount;
                             const lessonRefundedAmount = refunded ? lessonActualPaid : 0;
-                            const lessonRefundableAmount = Math.max(lessonActualPaid - consumedAmount - lessonRefundedAmount, 0);
+                            const lessonRefundableAmount = Math.max(lessonActualPaid - lessonRefundedAmount, 0);
                             return (
                               <tr key={lesson.id} className={isSelectedRefundLesson ? "bg-[#eef4ff]" : lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}>
                                 <td className="px-4 py-3 font-medium">第 {lesson.id} 课次</td>
@@ -2029,7 +2032,7 @@ export default function App() {
                             <td className="px-4 py-3 text-[#165dff]">¥ {formatMoney(specialRefundSummaryLessons.reduce((sum, lesson) => {
                               const lessonActualPaid = ORIGINAL_PRICE - getLessonDiscount(lesson);
                               const lessonRefundedAmount = lesson.state === "refunded" ? lessonActualPaid : 0;
-                              return sum + Math.max(lessonActualPaid - getCourseConsumption(lesson) - lessonRefundedAmount, 0);
+                              return sum + Math.max(lessonActualPaid - lessonRefundedAmount, 0);
                             }, 0))}</td>
                           </tr>
                         </tfoot>
@@ -2353,7 +2356,7 @@ export default function App() {
 
                 {mode === "withdraw" && detailView === "withdrawRefund" && selectedLessons.length > 0 && <div className="mb-5 rounded-lg border border-[#f8d6bd] bg-[#fff8f2] p-4">
                   <p className="text-sm font-semibold text-[#7a431c]">本次退款计算</p>
-                  {isOriginalPriceRefund ? <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3"><div><p className="text-[#9a6a47]">前7课次按原价收费</p><p className="mt-1 font-semibold text-[#5e3315]">7 × ¥210 = ¥{formatMoney(ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS * ORIGINAL_PRICE)}</p></div><div><p className="text-[#9a6a47]">第8课次按支付剩余金额收费</p><p className="mt-1 font-semibold text-[#5e3315]">¥{formatMoney(actualPaidAmount)} - ¥{formatMoney(ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS * ORIGINAL_PRICE)} = ¥{formatMoney(actualPaidAmount - ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS * ORIGINAL_PRICE)}</p></div><div><p className="text-[#9a6a47]">第9-15课次按0元收费</p><p className="mt-1 font-semibold text-[#5e3315]">¥0.00</p></div></div> : <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#5e3315]"><span>所选 {selectedLessons.length} 节</span><span className="text-[#c59b7c]">×</span><span>单课次实付金额 ¥105</span><span className="text-[#c59b7c]">=</span><strong className="text-[#d85b18]">退款 ¥{refundAmount.toLocaleString()}</strong></div>}
+                  {isOriginalPriceRefund ? <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3"><div><p className="text-[#9a6a47]">前7课次按原价收费</p><p className="mt-1 font-semibold text-[#5e3315]">7 × ¥210 = ¥{formatMoney(ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS * ORIGINAL_PRICE)}</p></div><div><p className="text-[#9a6a47]">第8课次按支付剩余金额收费</p><p className="mt-1 font-semibold text-[#5e3315]">¥{formatMoney(actualPaidAmount)} - ¥{formatMoney(ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS * ORIGINAL_PRICE)} = ¥{formatMoney(actualPaidAmount - ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS * ORIGINAL_PRICE)}</p></div><div><p className="text-[#9a6a47]">第9-15课次按0元收费</p><p className="mt-1 font-semibold text-[#5e3315]">¥0.00</p></div></div> : <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#5e3315]"><span>所选 {selectedLessons.length} 节</span><span className="text-[#c59b7c]">×</span><span>{hasCashPaymentDiscount ? "按所选课次实付金额合计" : hasDiscount ? "单课次实付金额 ¥105.00" : "单课次实付金额 ¥210.00"}</span><span className="text-[#c59b7c]">=</span><strong className="text-[#d85b18]">退款 ¥{formatMoney(refundAmount)}</strong></div>}
                 </div>}
 
                 {mode === "withdraw" && detailView === "withdrawRefund" && <div className="overflow-x-auto rounded-lg border border-[#e5e9f0]">
@@ -2380,7 +2383,7 @@ export default function App() {
                             const lessonDiscount = getLessonDiscount(lesson);
                             const lessonActualPaid = ORIGINAL_PRICE - lessonDiscount;
                             const lessonRefundedAmount = refunded ? lessonActualPaid : 0;
-                            const lessonRefundableAmount = Math.max(lessonActualPaid - consumedAmount - lessonRefundedAmount, 0);
+                            const lessonRefundableAmount = Math.max(lessonActualPaid - lessonRefundedAmount, 0);
                             return <tr key={lesson.id} className={isSelectedRefundLesson ? "bg-[#FEF8F3]" : lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}><td className="px-4 py-3 font-medium">第 {lesson.id} 课次</td><td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${lesson.state === "completed" ? "bg-[#f2f4f7] text-[#667085]" : refunded ? "bg-[#fff0ed] text-[#c84d3c]" : "bg-[#edf7f4] text-[#0b806f]"}`}>{lessonStatus}</span></td><td className="px-4 py-3">¥ 210.00</td><td className="px-4 py-3 text-[#d85b18]">-¥ {formatMoney(lessonDiscount)}</td>{detailView === "withdrawRefund" ? <>{isOriginalPriceRefund && <td className="px-4 py-3">¥ {formatMoney(lessonActualPaid)}</td>}<td className="px-4 py-3">¥ {formatMoney(consumedAmount)}</td><td className="px-4 py-3">¥ {formatMoney(lessonRefundedAmount)}</td><td className="px-4 py-3 font-medium text-[#165dff]">¥ {formatMoney(lessonRefundableAmount)}</td></> : <td className="px-4 py-3">¥ {formatMoney(lessonActualPaid)}</td>}</tr>;
                           })}
                         </tbody>
@@ -2397,7 +2400,7 @@ export default function App() {
                               <td className="px-4 py-3 text-[#165dff]">¥ {formatMoney(refundSummaryLessons.reduce((sum, lesson) => {
                                 const lessonActualPaid = ORIGINAL_PRICE - getLessonDiscount(lesson);
                                 const lessonRefundedAmount = lesson.state === "refunded" ? lessonActualPaid : 0;
-                                return sum + Math.max(lessonActualPaid - getCourseConsumption(lesson) - lessonRefundedAmount, 0);
+                                return sum + Math.max(lessonActualPaid - lessonRefundedAmount, 0);
                               }, 0))}</td>
                             </> : <td className="px-4 py-3">¥ {formatMoney(refundSummaryLessons.reduce((sum, lesson) => sum + ORIGINAL_PRICE - getLessonDiscount(lesson), 0))}</td>}
                           </tr>

@@ -65,7 +65,7 @@ export function PaidAmountDetailDialog({
                 const lessonDiscount = getLessonDiscount(lesson);
                 const lessonActualPaid = 210 - lessonDiscount;
                 const lessonRefundedAmount = refunded ? lessonActualPaid : 0;
-                const lessonRefundableAmount = Math.max(lessonActualPaid - consumedAmount - lessonRefundedAmount, 0);
+                const lessonRefundableAmount = Math.max(lessonActualPaid - lessonRefundedAmount, 0);
                 const lessonStatus = lesson.state === "completed" ? "已下课" : refunded ? "已退款" : "未上课";
                 return (
                   <tr key={lesson.id} className={lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}>
