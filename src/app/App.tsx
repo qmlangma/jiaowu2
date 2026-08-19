@@ -79,7 +79,7 @@ const ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS = 7;
 const ORIGINAL_PRICE_REFUND_TRANSITION_LESSON = 8;
 const ORIGINAL_PRICE_REFUND_TRANSITION_AMOUNT = 105;
 const REFUND_AMOUNT_HELP_TEXT =
-  "可退金额 = 退课已退金额 + 线上课已返利金额 + 高端班半价已退金额 + 其他特殊退费已退金额";
+  "已退金额指已经退款的金额，包括现金返利、高端班半价、手动退款等各种操作的已退款金额之和";
 const DISCOUNT_OPTIONS: { id: DiscountOptionId; label: string; rate: number; description: string }[] = [
   { id: "plan_eight", label: "比心计划8折", rate: 0.2, description: "按优惠价计费，优惠金额平均分摊至所有课次，按照课次实际支付价格计算退款金额。" },
   { id: "plan_seven", label: "比心计划7折", rate: 0.3, description: "按优惠价计费，优惠金额平均分摊至所有课次，按照课次实际支付价格计算退款金额。" },
@@ -234,7 +234,20 @@ function DiscountAmountHeaderHelp() {
         <CircleHelp size={15} />
       </span>
       <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 w-[300px] -translate-x-1/2 rounded-md bg-[#344054] px-3 py-2 text-xs leading-5 text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-        优惠总金额=活动/折扣优惠金额+现金优惠金额
+        优惠总金额=折扣/活动优惠金额+现金优惠金额
+        <span className="absolute -top-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-[#344054]" />
+      </span>
+    </>
+  );
+}
+function RemainingRefundableHeaderHelp() {
+  return (
+    <>
+      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[#165dff]">
+        <CircleHelp size={15} />
+      </span>
+      <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 w-[320px] -translate-x-1/2 rounded-md bg-[#344054] px-3 py-2 text-xs leading-5 text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        最大可退款金额=课程原价-优惠总金额-已退金额
         <span className="absolute -top-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-[#344054]" />
       </span>
     </>
@@ -491,8 +504,9 @@ export default function App() {
   const completedOnlineLessons = onlineLessons.filter((lesson) => lesson.state === "completed");
   const completedLessons = lessons.filter((lesson) => lesson.state === "completed");
   const activityDiscountAmount = hasDiscount ? 1575 : 0;
+  const totalDiscountAmount = activityDiscountAmount + cashPaymentDiscountAmount;
   const actualPaidAmount = 3150 - activityDiscountAmount - cashPaymentDiscountAmount;
-  const orderInfoGridCols = hasCashPaymentDiscount ? "sm:grid-cols-6" : "sm:grid-cols-5";
+  const orderInfoGridCols = "sm:grid-cols-5";
   const specialScenarioLessons =
     specialScenario === "online_rebate"
       ? lessons.map((lesson) => ({
@@ -742,12 +756,11 @@ export default function App() {
     }
   })();
   const customRefundFormulaCourseTotal = 3150;
-  const customRefundFormulaDiscount = hasDiscount ? 1575 : 0;
-  const customRefundFormulaCashDiscount = cashPaymentDiscountAmount;
+  const customRefundFormulaDiscount = totalDiscountAmount;
   const customRefundFormulaRefunded = 0;
   const customRefundFormulaAmount =
-    customRefundFormulaCourseTotal - customRefundFormulaDiscount - customRefundFormulaCashDiscount - customRefundFormulaRefunded;
-  const customRefundFormulaText = `课程总价¥${formatMoney(customRefundFormulaCourseTotal)}-优惠金额¥${formatMoney(customRefundFormulaDiscount)}-现金优惠¥${formatMoney(customRefundFormulaCashDiscount)}-已退金额¥${formatMoney(customRefundFormulaRefunded)}=¥${formatMoney(customRefundFormulaAmount)}`;
+    customRefundFormulaCourseTotal - customRefundFormulaDiscount - customRefundFormulaRefunded;
+  const customRefundFormulaText = `课程总价¥${formatMoney(customRefundFormulaCourseTotal)}-优惠总金额¥${formatMoney(customRefundFormulaDiscount)}-已退金额¥${formatMoney(customRefundFormulaRefunded)}=¥${formatMoney(customRefundFormulaAmount)}`;
   const specialRefundMaxAmount = specialScenario === "custom_refund" ? customRefundFormulaAmount : getSpecialMaxRefundableAmount();
   const specialApplicationList = specialApplications.filter(
     (item) => specialApplicationStatus === "all" || item.status === specialApplicationStatus,
@@ -1043,12 +1056,7 @@ export default function App() {
                 >
                   查看PRD
                 </button>
-                <button
-                  onClick={() => openNewPage("analysis")}
-                  className="inline-flex h-11 items-center justify-center rounded-full border border-[#dbe3ef] bg-white px-4 text-[15px] font-semibold text-[#1d2939] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#bcd1ff] hover:text-[#165dff] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#165dff]"
-                >
-                  查看数据分析
-                </button>
+
               </div>
 
               <div className="flex flex-wrap items-center gap-3 xl:justify-end">
@@ -1247,7 +1255,7 @@ export default function App() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8">
-          <section className="mb-7"><SectionTitle icon={FileText}>订单信息</SectionTitle><div className="rounded-xl border border-[#e7ebf2] bg-white p-4"><div className="flex flex-col gap-4 border-b border-[#edf0f4] pb-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs text-[#98a2b3]">班级名称</p><p className="mt-1 text-sm font-medium leading-6 text-[#344054]">【暑假】一年级信息学算法一期 · 上午小星星柏悦中心</p></div><div className="shrink-0 sm:text-right"><p className="text-xs text-[#98a2b3]">所购课次</p><p className="mt-1 text-sm font-semibold text-[#344054]">1–15</p></div></div><div className={`grid grid-cols-2 gap-x-4 gap-y-3 pt-4 text-sm ${orderInfoGridCols}`}><div><p className="text-xs text-[#98a2b3]">课程总价</p><p className="mt-1 font-semibold">¥ 3,150.00</p></div><div><p className="whitespace-nowrap text-xs text-[#98a2b3]">活动/折扣优惠金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">-¥ {formatMoney(activityDiscountAmount)}</p>{hasDiscount && <button onClick={() => setDetailView("discount")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看优惠说明"><CircleHelp size={15} /></button>}</div></div>{hasCashPaymentDiscount && <div><p className="text-xs text-[#98a2b3]">现金支付优惠</p><p className="mt-1 font-semibold text-[#d85b18]">-¥ {formatMoney(cashPaymentDiscountAmount)}</p></div>}<div><p className="text-xs text-[#98a2b3]">实付金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">¥ {formatMoney(actualPaidAmount)}</p><button onClick={() => setDetailView("paid")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看实付金额明细"><CircleHelp size={15} /></button></div></div><div><p className="text-xs text-[#98a2b3]">付款方式</p><p className="mt-1 font-semibold">{paymentMethod}</p></div><div className="min-w-[120px]"><p className="whitespace-nowrap text-xs text-[#98a2b3]">付款时间</p><p className="mt-1 whitespace-nowrap text-sm font-semibold text-[#344054]">2026-07-12 12:00</p></div></div></div></section>
+          <section className="mb-7"><SectionTitle icon={FileText}>订单信息</SectionTitle><div className="rounded-xl border border-[#e7ebf2] bg-white p-4"><div className="flex flex-col gap-4 border-b border-[#edf0f4] pb-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs text-[#98a2b3]">班级名称</p><p className="mt-1 text-sm font-medium leading-6 text-[#344054]">【暑假】一年级信息学算法一期 · 上午小星星柏悦中心</p></div><div className="shrink-0 sm:text-right"><p className="text-xs text-[#98a2b3]">所购课次</p><p className="mt-1 text-sm font-semibold text-[#344054]">1–15</p></div></div><div className={`grid grid-cols-2 gap-x-4 gap-y-3 pt-4 text-sm ${orderInfoGridCols}`}><div><p className="text-xs text-[#98a2b3]">课程总价</p><p className="mt-1 font-semibold">¥ 3,150.00</p></div><div><p className="whitespace-nowrap text-xs text-[#98a2b3]">优惠总金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold text-[#d85b18]">-¥ {formatMoney(totalDiscountAmount)}</p>{hasDiscount && <button onClick={() => setDetailView("discount")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看优惠说明"><CircleHelp size={15} /></button>}</div></div><div><p className="text-xs text-[#98a2b3]">实付金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">¥ {formatMoney(actualPaidAmount)}</p><button onClick={() => setDetailView("paid")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看实付金额明细"><CircleHelp size={15} /></button></div></div><div><p className="text-xs text-[#98a2b3]">付款方式</p><p className="mt-1 font-semibold">{paymentMethod}</p></div><div className="min-w-[120px]"><p className="whitespace-nowrap text-xs text-[#98a2b3]">付款时间</p><p className="mt-1 whitespace-nowrap text-sm font-semibold text-[#344054]">2026-07-12 12:00</p></div></div></div></section>
 
               <section><SectionTitle icon={CreditCard}>{mode === "withdraw" ? "退课申请" : "退款申请"}</SectionTitle><div className="rounded-xl bg-[#f8fafc] p-4 sm:p-5">{mode === "withdraw" && <div className="mb-4 space-y-2"><span className="block text-sm font-medium text-[#344054]">退课原因</span><div className="relative"><select value={reason} onChange={(event) => setReason(event.target.value)} className="h-11 w-full appearance-none rounded-lg border border-[#e4e7ec] bg-white px-3 text-sm text-[#344054] outline-none transition focus:border-[#1668d8] focus:ring-4 focus:ring-[#1668d8]/10"><option value="" disabled>请选择退课原因</option><option>时间冲突</option><option>距离冲突</option><option>教师问题</option><option>课程问题</option><option>退费重报</option><option value="业务办理错误">业务办理错误 [不计算三率]</option><option>其他</option></select><ChevronDown className="pointer-events-none absolute right-3 top-3 text-[#667085]" size={17} /></div></div>}<div className="mb-6 space-y-2"><span className="block text-sm font-medium text-[#344054]">退款说明</span><textarea className="min-h-20 w-full resize-none rounded-lg border border-[#e4e7ec] bg-white px-3 py-3 text-sm outline-none transition placeholder:text-[#98a2b3] focus:border-[#1668d8] focus:ring-4 focus:ring-[#1668d8]/10" placeholder="请选择退款说明" /></div>
                 {mode === "withdraw" && <div><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold text-[#344054]">{withdrawLessonSelectionTitle}</p><p className="text-xs text-[#667085]">{selectedLessons.length ? `已选择 ${selectedLessons.length} 节` : withdrawLessonSelectionHint}</p></div><div className="grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-9">{withdrawLessons.map((lesson) => { const isSelected = selectedLessons.includes(lesson.id); const isCompleted = lesson.state === "completed"; const isInProgress = lesson.state === "in_progress"; const isRefunded = lesson.state === "refunded"; const isLockedOperationsLesson = currentDemoKind === "operations" && lesson.state === "selectable"; const isDisabled = isLockedOperationsLesson || (withdrawSelectionMode === "range" ? lesson.state !== "selectable" : isRefunded); return <button key={lesson.id} onClick={() => toggleWithdrawLesson(lesson.id)} disabled={isDisabled} className={`relative flex h-14 flex-col items-center justify-center rounded-lg text-sm font-semibold transition ${isSelected ? `${isLockedOperationsLesson ? "cursor-not-allowed " : ""}bg-[#1668d8] text-white shadow-[0_6px_12px_rgba(22,104,216,0.18)]` : isDisabled ? "cursor-not-allowed bg-[#eaecf0] text-[#98a2b3]" : "bg-white text-[#475467] ring-1 ring-[#d0d5dd] hover:ring-[#1668d8] hover:text-[#1668d8]"}`}><span className="absolute top-1.5 text-[9px] font-medium opacity-80">{isCompleted ? "已下课" : isInProgress ? "上课中" : isRefunded ? "已退课" : isSelected ? "退课" : "可退"}</span><span className="mt-3">{lesson.id}</span>{isSelected && <Check className="absolute right-1.5 top-1.5" size={12} strokeWidth={3} />}</button>; })}</div></div>}
@@ -1400,8 +1408,7 @@ export default function App() {
                       <p className="text-xs font-medium text-[#9a5d27]">本次退款金额</p>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <p className="text-2xl font-semibold tracking-[-0.03em] text-[#d85b18]">¥ {(mode === "withdraw" ? refundAmount : specialRefundAmount).toFixed(2)}</p>
-                        {((hasDiscount && mode === "withdraw") || mode === "refund") && !(mode === "refund" && specialScenario === "custom_refund" && customRefundAmountNumber <= 0) ? <button onClick={openCurrentRefundAmountDetail} className="rounded-sm text-[#d85b18] transition hover:text-[#a63f0c]" aria-label="查看本次退款金额明细"><CircleHelp size={16} /></button> : null}
-                        {!hasDiscount && selectedLessons.length > 0 && mode === "withdraw" && <span className="text-sm font-medium text-[#9a5d27]">已选{selectedLessons.length}节课 ✕单次课实付金额¥210.00</span>}
+                        {!(mode === "refund" && specialScenario === "custom_refund" && customRefundAmountNumber <= 0) ? <button onClick={openCurrentRefundAmountDetail} className="rounded-sm text-[#d85b18] transition hover:text-[#a63f0c]" aria-label="查看本次退款金额明细"><CircleHelp size={16} /></button> : null}
                         {mode === "refund" && specialRefundSummaryText && <span className="text-sm font-medium text-[#9a5d27]">{specialRefundSummaryText}</span>}
                       </div>
                       {hasSelectedCompletedLesson && <p className="mt-2 text-xs font-medium text-[#c84d3c]">已下课次操作退款后，课次状态将更新为已退课</p>}
@@ -1626,6 +1633,18 @@ export default function App() {
                     </span>
                   </div>
                 </div>}
+                {hasCashPaymentDiscount && <div className="mb-5 space-y-3 rounded-lg border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm">
+                  <div className="flex gap-3">
+                    <span className="w-20 shrink-0 text-[#667085]">优惠名称</span>
+                    <span className="font-medium text-[#1d2939]">现金支付优惠{cashPaymentGlobalDiscount}元</span>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="w-20 shrink-0 text-[#667085]">优惠规则</span>
+                    <span className="leading-6 text-[#344054]">
+                      <strong className="font-semibold text-[#165dff]">按优惠价计费</strong>，优惠金额平均分摊至所有课次，按照课次实际支付价格计算退款金额。
+                    </span>
+                  </div>
+                </div>}
 
                 <p className="mb-3 text-sm font-semibold text-[#1d2939]">课次明细表</p>
                 <div className="overflow-x-auto rounded-lg border border-[#e5e9f0]">
@@ -1649,6 +1668,7 @@ export default function App() {
                                     </span>
                                   </>
                                 )}
+                                {title === "剩余可退金额" && <RemainingRefundableHeaderHelp />}
                               </span>
                             </th>
                           ))}
@@ -1697,6 +1717,18 @@ export default function App() {
                     </span>
                   </div>
                 </div>}
+                {hasCashPaymentDiscount && <div className="mb-5 space-y-3 rounded-lg border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm">
+                  <div className="flex gap-3">
+                    <span className="w-20 shrink-0 text-[#667085]">优惠名称</span>
+                    <span className="font-medium text-[#1d2939]">现金支付优惠{cashPaymentGlobalDiscount}元</span>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="w-20 shrink-0 text-[#667085]">优惠规则</span>
+                    <span className="leading-6 text-[#344054]">
+                      <strong className="font-semibold text-[#165dff]">按优惠价计费</strong>，优惠金额平均分摊至所有课次，按照课次实际支付价格计算退款金额。
+                    </span>
+                  </div>
+                </div>}
 
                 <p className="mb-3 text-sm font-semibold text-[#1d2939]">课次明细表</p>
                 <div className="overflow-x-auto rounded-lg border border-[#e5e9f0]">
@@ -1720,6 +1752,7 @@ export default function App() {
                                     </span>
                                   </>
                                 )}
+                                {title === "剩余可退金额" && <RemainingRefundableHeaderHelp />}
                               </span>
                             </th>
                           ))}
@@ -1773,15 +1806,29 @@ export default function App() {
                         </div>
                       </div>
                     )}
+                    {hasCashPaymentDiscount && (
+                      <div className="rounded-lg border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm">
+                        <div className="space-y-3">
+                          <div className="flex gap-3">
+                            <span className="w-20 shrink-0 text-[#667085]">优惠名称</span>
+                            <span className="font-medium text-[#1d2939]">现金支付优惠{cashPaymentGlobalDiscount}元</span>
+                          </div>
+                          <div className="flex gap-3">
+                            <span className="w-20 shrink-0 text-[#667085]">优惠规则</span>
+                            <span className="leading-6 text-[#344054]">
+                              <strong className="font-semibold text-[#165dff]">按优惠价计费</strong>，优惠金额平均分摊至所有课次，按照课次实际支付价格计算退款金额。
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="rounded-2xl border border-[#f3d1b0] bg-[#fffaf4] p-5 text-sm">
                       <p className="text-[15px] font-semibold text-[#8a4f16]">最大可退款金额=</p>
                       <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[15px] leading-7 text-[#7a431c]">
                         <span>课程总价¥{formatMoney(customRefundFormulaCourseTotal)}</span>
                         <span>−</span>
-                        <span>优惠金额¥{formatMoney(customRefundFormulaDiscount)}</span>
-                        <span>−</span>
-                        <span>现金优惠¥{formatMoney(customRefundFormulaCashDiscount)}</span>
+                        <span>优惠总金额¥{formatMoney(customRefundFormulaDiscount)}</span>
                         <span>−</span>
                         <span>已退金额¥{formatMoney(customRefundFormulaRefunded)}</span>
                         <span>=</span>
@@ -1802,6 +1849,7 @@ export default function App() {
                                       <span className="group relative inline-flex items-center gap-1">
                                         <span>{title}</span>
                                         {title === "优惠总金额" && <DiscountAmountHeaderHelp />}
+                                        {title === "剩余可退金额" && <RemainingRefundableHeaderHelp />}
                                       </span>
                                     </th>
                                   ))}
@@ -1868,6 +1916,7 @@ export default function App() {
                                       <span className="group relative inline-flex items-center gap-1">
                                         <span>{title}</span>
                                         {title === "优惠总金额" && <DiscountAmountHeaderHelp />}
+                                        {title === "剩余可退金额" && <RemainingRefundableHeaderHelp />}
                                       </span>
                                     </th>
                                   ))}
@@ -1942,6 +1991,19 @@ export default function App() {
                   </div>
                 </div>}
 
+                {mode === "withdraw" && hasCashPaymentDiscount && <div className="mb-5 space-y-3 rounded-lg border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm">
+                  <div className="flex gap-3">
+                    <span className="w-20 shrink-0 text-[#667085]">优惠名称</span>
+                    <span className="font-medium text-[#1d2939]">现金支付优惠{cashPaymentGlobalDiscount}元</span>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="w-20 shrink-0 text-[#667085]">优惠规则</span>
+                    <span className="leading-6 text-[#344054]">
+                      <strong className="font-semibold text-[#165dff]">按优惠价计费</strong>，优惠金额平均分摊至所有课次，按照课次实际支付价格计算退款金额。
+                    </span>
+                  </div>
+                </div>}
+
                 {mode === "withdraw" && selectedLessons.length === 0 && (
                   <div className="mb-5">
                     <LessonSelectionEmptyState
@@ -1949,17 +2011,6 @@ export default function App() {
                     />
                   </div>
                 )}
-
-                {showSingleLessonRefundCourseTable && specialSelectedLessonIds.length > 0 && <div className="mb-5 rounded-lg border border-[#f8d6bd] bg-[#fff8f2] p-4">
-                  <p className="text-sm font-semibold text-[#7a431c]">本次退款计算</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#5e3315]">
-                    <span>所选 {specialSelectedLessonIds.length} 节</span>
-                    <span className="text-[#c59b7c]">×</span>
-                    <span>{hasCashPaymentDiscount ? "按所选课次实付金额合计" : hasDiscount ? "单课次实付金额 ¥105.00" : "单课次实付金额 ¥210.00"}</span>
-                    <span className="text-[#c59b7c]">=</span>
-                    <strong className="text-[#d85b18]">退款 ¥{specialRefundAmount.toLocaleString()}</strong>
-                  </div>
-                </div>}
 
                 {showSingleLessonRefundCourseTable && <div className="overflow-x-auto rounded-lg border border-[#e5e9f0]">
                   {specialSelectedLessonIds.length ? <>
@@ -1989,6 +2040,7 @@ export default function App() {
                                       </span>
                                     </>
                                   )}
+                                {title === "剩余可退金额" && <RemainingRefundableHeaderHelp />}
                                 </span>
                               </th>
                             ))}
@@ -2064,6 +2116,11 @@ export default function App() {
                 {showSpecialRefundForm && hasDiscount && specialScenario !== "online_rebate" && specialScenario !== "high_end_half" && specialScenario !== "discount_diff" && specialScenario !== "custom_refund" && <div className="mb-5 space-y-3 rounded-lg border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm">
                   <div className="flex gap-3"><span className="w-20 shrink-0 text-[#667085]">优惠名称</span><span className="font-medium text-[#1d2939]">{specialDiscount === "special_five_original" ? "特殊关系5折（按原价）" : "特殊关系5折（按优惠价）"}</span></div>
                   <div className="flex gap-3"><span className="w-20 shrink-0 text-[#667085]">优惠规则</span><span className="leading-6 text-[#344054]">{(() => { const discountRule = getDiscountRefundRuleText(activeSpecialDiscount); return (<><strong className="font-semibold text-[#165dff]">{discountRule.title}</strong>，{discountRule.description}</>); })()}</span></div>
+                </div>}
+
+                {showSpecialRefundForm && hasCashPaymentDiscount && specialScenario !== "online_rebate" && specialScenario !== "high_end_half" && specialScenario !== "discount_diff" && specialScenario !== "custom_refund" && <div className="mb-5 space-y-3 rounded-lg border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm">
+                  <div className="flex gap-3"><span className="w-20 shrink-0 text-[#667085]">优惠名称</span><span className="font-medium text-[#1d2939]">现金支付优惠{cashPaymentGlobalDiscount}元</span></div>
+                  <div className="flex gap-3"><span className="w-20 shrink-0 text-[#667085]">优惠规则</span><span className="leading-6 text-[#344054]"><strong className="font-semibold text-[#165dff]">按优惠价计费</strong>，优惠金额平均分摊至所有课次，按照课次实际支付价格计算退款金额。</span></div>
                 </div>}
 
                 {showSpecialRefundForm && showSingleLessonSelectionPrompt && (
@@ -2173,6 +2230,7 @@ export default function App() {
                                       </span>
                                     </>
                                   )}
+                                  {(title === "高端班剩余可退金额") && <RemainingRefundableHeaderHelp />}
                                 </span>
                               </th>
                             ))}
@@ -2354,11 +2412,6 @@ export default function App() {
                   </div>
                 )}
 
-                {mode === "withdraw" && detailView === "withdrawRefund" && selectedLessons.length > 0 && <div className="mb-5 rounded-lg border border-[#f8d6bd] bg-[#fff8f2] p-4">
-                  <p className="text-sm font-semibold text-[#7a431c]">本次退款计算</p>
-                  {isOriginalPriceRefund ? <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3"><div><p className="text-[#9a6a47]">前7课次按原价收费</p><p className="mt-1 font-semibold text-[#5e3315]">7 × ¥210 = ¥{formatMoney(ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS * ORIGINAL_PRICE)}</p></div><div><p className="text-[#9a6a47]">第8课次按支付剩余金额收费</p><p className="mt-1 font-semibold text-[#5e3315]">¥{formatMoney(actualPaidAmount)} - ¥{formatMoney(ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS * ORIGINAL_PRICE)} = ¥{formatMoney(actualPaidAmount - ORIGINAL_PRICE_REFUND_FULL_PRICE_LESSONS * ORIGINAL_PRICE)}</p></div><div><p className="text-[#9a6a47]">第9-15课次按0元收费</p><p className="mt-1 font-semibold text-[#5e3315]">¥0.00</p></div></div> : <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#5e3315]"><span>所选 {selectedLessons.length} 节</span><span className="text-[#c59b7c]">×</span><span>{hasCashPaymentDiscount ? "按所选课次实付金额合计" : hasDiscount ? "单课次实付金额 ¥105.00" : "单课次实付金额 ¥210.00"}</span><span className="text-[#c59b7c]">=</span><strong className="text-[#d85b18]">退款 ¥{formatMoney(refundAmount)}</strong></div>}
-                </div>}
-
                 {mode === "withdraw" && detailView === "withdrawRefund" && <div className="overflow-x-auto rounded-lg border border-[#e5e9f0]">
                   {selectedLessons.length ? <>
                     <div className="flex items-center justify-between border-b border-[#e5e9f0] bg-white px-4 py-3 text-sm">
@@ -2371,7 +2424,7 @@ export default function App() {
                       <table className="w-full border-collapse text-sm min-w-[900px]">
                         <thead className="bg-[#f7f8fa] text-left text-[#667085]">
                           <tr>
-                            {["课次", "课次状态", "原价", "优惠总金额", ...(isOriginalPriceRefund ? ["实际支付金额"] : []), "课耗金额", "已退金额", "剩余可退金额"].map((title) => <th key={title} className="sticky top-0 z-20 border-b border-[#e5e9f0] bg-[#f7f8fa] px-4 py-3 font-medium"><span className="group relative inline-flex items-center gap-1"><span>{title}</span>{title === "优惠总金额" && <DiscountAmountHeaderHelp />}{title === "已退金额" && <><span className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[#165dff]"><CircleHelp size={15} /></span><span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 w-[260px] -translate-x-1/2 rounded-md bg-[#344054] px-3 py-2 text-xs leading-5 text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{REFUND_AMOUNT_HELP_TEXT}<span className="absolute -top-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-[#344054]" /></span></>}</span></th>)}
+                            {["课次", "课次状态", "原价", "优惠总金额", "课耗金额", "已退金额", "剩余可退金额"].map((title) => <th key={title} className="sticky top-0 z-20 border-b border-[#e5e9f0] bg-[#f7f8fa] px-4 py-3 font-medium"><span className="group relative inline-flex items-center gap-1"><span>{title}</span>{title === "优惠总金额" && <DiscountAmountHeaderHelp />}{title === "已退金额" && <><span className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[#165dff]"><CircleHelp size={15} /></span><span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 w-[450px] -translate-x-1/2 rounded-md bg-[#344054] px-3 py-2 text-xs leading-5 text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{REFUND_AMOUNT_HELP_TEXT}<span className="absolute -top-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-[#344054]" /></span></>}{title === "剩余可退金额" && <RemainingRefundableHeaderHelp />}</span></th>)}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#edf0f4] text-[#344054]">
@@ -2384,7 +2437,7 @@ export default function App() {
                             const lessonActualPaid = ORIGINAL_PRICE - lessonDiscount;
                             const lessonRefundedAmount = refunded ? lessonActualPaid : 0;
                             const lessonRefundableAmount = Math.max(lessonActualPaid - lessonRefundedAmount, 0);
-                            return <tr key={lesson.id} className={isSelectedRefundLesson ? "bg-[#FEF8F3]" : lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}><td className="px-4 py-3 font-medium">第 {lesson.id} 课次</td><td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${lesson.state === "completed" ? "bg-[#f2f4f7] text-[#667085]" : refunded ? "bg-[#fff0ed] text-[#c84d3c]" : "bg-[#edf7f4] text-[#0b806f]"}`}>{lessonStatus}</span></td><td className="px-4 py-3">¥ 210.00</td><td className="px-4 py-3 text-[#d85b18]">-¥ {formatMoney(lessonDiscount)}</td>{detailView === "withdrawRefund" ? <>{isOriginalPriceRefund && <td className="px-4 py-3">¥ {formatMoney(lessonActualPaid)}</td>}<td className="px-4 py-3">¥ {formatMoney(consumedAmount)}</td><td className="px-4 py-3">¥ {formatMoney(lessonRefundedAmount)}</td><td className="px-4 py-3 font-medium text-[#165dff]">¥ {formatMoney(lessonRefundableAmount)}</td></> : <td className="px-4 py-3">¥ {formatMoney(lessonActualPaid)}</td>}</tr>;
+                            return <tr key={lesson.id} className={isSelectedRefundLesson ? "bg-[#FEF8F3]" : lesson.state === "completed" ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}><td className="px-4 py-3 font-medium">第 {lesson.id} 课次</td><td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${lesson.state === "completed" ? "bg-[#f2f4f7] text-[#667085]" : refunded ? "bg-[#fff0ed] text-[#c84d3c]" : "bg-[#edf7f4] text-[#0b806f]"}`}>{lessonStatus}</span></td><td className="px-4 py-3">¥ 210.00</td><td className="px-4 py-3 text-[#d85b18]">-¥ {formatMoney(lessonDiscount)}</td>{detailView === "withdrawRefund" ? <><td className="px-4 py-3">¥ {formatMoney(consumedAmount)}</td><td className="px-4 py-3">¥ {formatMoney(lessonRefundedAmount)}</td><td className="px-4 py-3 font-medium text-[#165dff]">¥ {formatMoney(lessonRefundableAmount)}</td></> : <td className="px-4 py-3">¥ {formatMoney(lessonActualPaid)}</td>}</tr>;
                           })}
                         </tbody>
                         <tfoot className="bg-[#fafbfc] text-[#1d2939]">
@@ -2394,7 +2447,6 @@ export default function App() {
                             <td className="px-4 py-3">¥ {formatMoney(refundSummaryLessons.reduce((sum, lesson) => sum + ORIGINAL_PRICE, 0))}</td>
                             <td className="px-4 py-3 text-[#d85b18]">-¥ {formatMoney(refundSummaryLessons.reduce((sum, lesson) => sum + getLessonDiscount(lesson), 0))}</td>
                             {detailView === "withdrawRefund" ? <>
-                              {isOriginalPriceRefund && <td className="px-4 py-3">¥ {formatMoney(refundSummaryLessons.reduce((sum, lesson) => sum + (ORIGINAL_PRICE - getLessonDiscount(lesson)), 0))}</td>}
                               <td className="px-4 py-3">¥ {formatMoney(refundSummaryLessons.reduce((sum, lesson) => sum + getCourseConsumption(lesson), 0))}</td>
                               <td className="px-4 py-3">¥ {formatMoney(refundSummaryLessons.reduce((sum, lesson) => sum + (lesson.state === "refunded" ? ORIGINAL_PRICE - getLessonDiscount(lesson) : 0), 0))}</td>
                               <td className="px-4 py-3 text-[#165dff]">¥ {formatMoney(refundSummaryLessons.reduce((sum, lesson) => {
@@ -2407,7 +2459,7 @@ export default function App() {
                         </tfoot>
                       </table>
                     </div>
-                  </> : null}
+                  </> : <div className="flex flex-col items-center justify-center gap-2 bg-white px-4 py-12 text-sm text-[#667085]"><div className="rounded-full bg-[#f2f4f7] p-3 text-[#98a2b3]"><CircleHelp size={24} /></div><p>暂未选择退款课次，请先勾选需要退款的课次后再查看明细。</p></div>}
                 </div>}
               </>}
             </div>
