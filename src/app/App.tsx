@@ -1272,7 +1272,10 @@ export default function App() {
 
                   {specialScenario === "discount_diff" && <div className="space-y-3">
                     <div>
-                      <p className="mb-1.5 text-xs font-medium text-[#9a5d27]">选择新的优惠</p>
+                      <div className="mb-1.5 flex items-center gap-1.5">
+                        <p className="text-xs font-medium text-[#9a5d27]">选择新的优惠</p>
+                        <span className="text-[11px] font-normal text-[#98a2b3]">仅限该学员当前可用的折扣</span>
+                      </div>
                       <div className="relative">
                         <button
                           type="button"
@@ -2138,7 +2141,7 @@ export default function App() {
                       <table className="w-full min-w-[980px] border-collapse text-sm">
                         <thead className="bg-[#f7f8fa] text-left text-[#667085]">
                           <tr>
-                            {["课次", "课次状态", "原价", "原优惠金额", "现优惠金额", "优惠可退差价", "更换优惠后课耗金额"].map((title) => (
+                            {["课次", "课次状态", "原价", "已退金额", "原优惠金额", "现优惠金额", "优惠可退差价", "更换优惠后课耗金额"].map((title) => (
                               <th key={title} className="sticky top-0 z-20 border-b border-[#e5e9f0] bg-[#f7f8fa] px-4 py-3 font-medium">
                                 <span className="group relative inline-flex items-center gap-1">
                                   <span>{title}</span>
@@ -2163,6 +2166,7 @@ export default function App() {
                                   </span>
                                 </td>
                                 <td className="px-4 py-3">¥ 210.00</td>
+                                <td className="px-4 py-3">¥ {formatMoney(lesson.state === "refunded" ? ORIGINAL_PRICE - originalDiscountAmount : 0)}</td>
                                 <td className="px-4 py-3 text-[#d85b18]">{formatSignedMoney(-originalDiscountAmount)}</td>
                                 <td className="px-4 py-3 text-[#d85b18]">{formatSignedMoney(-currentDiscountAmount)}</td>
                                 <td className="px-4 py-3 font-medium text-[#165dff]">{formatSignedMoney(discountDiffAmount)}</td>
@@ -2176,6 +2180,7 @@ export default function App() {
                             <td className="px-4 py-3">退款合计</td>
                             <td className="px-4 py-3">—</td>
                             <td className="px-4 py-3">¥ {formatMoney(refundSummaryLessons.reduce((sum) => sum + ORIGINAL_PRICE, 0))}</td>
+                            <td className="px-4 py-3">¥ {formatMoney(refundSummaryLessons.reduce((sum, lesson) => sum + (lesson.state === "refunded" ? ORIGINAL_PRICE - getLessonOriginalDiscount(lesson) : 0), 0))}</td>
                             <td className="px-4 py-3 text-[#d85b18]">{formatSignedMoney(-refundSummaryLessons.reduce((sum, lesson) => sum + getLessonOriginalDiscount(lesson), 0))}</td>
                             <td className="px-4 py-3 text-[#d85b18]">{formatSignedMoney(-refundSummaryLessons.reduce((sum, lesson) => sum + getLessonCurrentDiscount(lesson), 0))}</td>
                             <td className="px-4 py-3 text-[#165dff]">{formatSignedMoney(refundSummaryLessons.reduce((sum, lesson) => sum + (getLessonCurrentDiscount(lesson) - getLessonOriginalDiscount(lesson)), 0))}</td>
