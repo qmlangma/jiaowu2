@@ -219,6 +219,50 @@ function SectionTitle({ icon: Icon, children }: { icon: typeof FileText; childre
   );
 }
 
+const MERGED_ORDER_OPTIONS = [
+  { id: 1, orderNo: "DD34092929", className: "【暑假】一年级信息学算法一期 · 上午小星星柏悦中心", discount: 0, paid: 3150, paymentMethod: "富友", paymentTime: "2026-07-12 12:00", refundableLessons: [7, 8, 9, 10, 11, 12, 13, 14], refundAmount: 1680 },
+  { id: 2, orderNo: "DD34092930", className: "【暑假】二年级信息学算法一期 · 下午小星星柏悦中心", discount: 1575, paid: 1575, paymentMethod: "富友", paymentTime: "2026-07-13 14:30", refundableLessons: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15], refundAmount: 1050 },
+] as const;
+
+function MergedOrderRefundContent({ selectedOrderIds, onToggleOrder }: { selectedOrderIds: number[]; onToggleOrder: (orderId: number) => void }) {
+  return (
+    <div className="space-y-5">
+      {MERGED_ORDER_OPTIONS.map((order) => {
+        const selected = selectedOrderIds.includes(order.id);
+        return (
+        <section key={order.id} className={`overflow-hidden rounded-2xl border bg-white shadow-[0_8px_26px_rgba(15,23,42,0.05)] transition ${selected ? "border-[#165dff]" : "border-[#dbe3ef]"}`}>
+          <div className="flex items-center justify-between border-b border-[#e7ebf2] bg-[#f8fafc] px-5 py-4">
+            <h2 className="text-[17px] font-semibold text-[#1d2939]">订单{order.id}:{order.orderNo}</h2>
+            <button
+              type="button"
+              onClick={() => onToggleOrder(order.id)}
+              role="checkbox"
+              aria-checked={selected}
+              className={`inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-semibold transition ${selected ? "text-[#165dff]" : "text-[#475467] hover:text-[#165dff]"}`}
+            >
+              <span className={`flex size-5 items-center justify-center rounded border transition ${selected ? "border-[#165dff] bg-[#165dff] text-white" : "border-[#b8c2d1] bg-white text-transparent"}`}>
+                <Check size={13} strokeWidth={3} />
+              </span>
+              <span>{selected ? "已选择" : "选择"}</span>
+            </button>
+          </div>
+          <div className="space-y-6 p-5">
+            <div><SectionTitle icon={FileText}>订单信息</SectionTitle><div className="rounded-xl border border-[#e7ebf2] p-4"><div className="flex flex-col gap-3 border-b border-[#edf0f4] pb-4 sm:flex-row sm:justify-between"><div><p className="text-xs text-[#98a2b3]">班级名称</p><p className="mt-1 text-sm font-medium text-[#344054]">{order.className}</p></div><div className="sm:text-right"><p className="text-xs text-[#98a2b3]">所购课次</p><p className="mt-1 text-sm font-semibold text-[#344054]">1–15</p></div></div><div className="grid grid-cols-2 gap-4 pt-4 text-sm sm:grid-cols-5"><div><p className="text-xs text-[#98a2b3]">课程总价</p><p className="mt-1 font-semibold">¥ 3,150.00</p></div><div><p className="text-xs text-[#98a2b3]">优惠总金额</p><p className="mt-1 font-semibold text-[#d85b18]">-¥ {order.discount.toFixed(2)}</p></div><div><p className="text-xs text-[#98a2b3]">实付金额</p><p className="mt-1 font-semibold">¥ {order.paid.toFixed(2)}</p></div><div><p className="text-xs text-[#98a2b3]">付款方式</p><p className="mt-1 font-semibold">{order.paymentMethod}</p></div><div><p className="text-xs text-[#98a2b3]">付款时间</p><p className="mt-1 whitespace-nowrap font-semibold">{order.paymentTime}</p></div></div></div></div>
+            <div><SectionTitle icon={CreditCard}>退课申请</SectionTitle><div className="space-y-5 rounded-xl bg-[#f8fafc] p-4">
+              <label className="block space-y-2"><span className="text-sm font-medium text-[#344054]">退课原因</span><div className="relative"><select defaultValue="" className="h-11 w-full appearance-none rounded-lg border border-[#e4e7ec] bg-white px-3 text-sm text-[#344054] outline-none"><option value="" disabled>请选择退课原因</option><option>时间冲突</option><option>距离冲突</option><option>教师问题</option><option>课程问题</option><option>退费重报</option><option>业务办理错误 [不计算三率]</option><option>其他</option></select><ChevronDown className="pointer-events-none absolute right-3 top-3 text-[#667085]" size={17} /></div></label>
+              <label className="block space-y-2"><span className="text-sm font-medium text-[#344054]">退款说明</span><textarea className="min-h-20 w-full resize-none rounded-lg border border-[#e4e7ec] bg-white px-3 py-3 text-sm outline-none placeholder:text-[#98a2b3]" placeholder="请输入退款说明" /></label>
+              <div><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold text-[#344054]">选择要退的课次</p><p className="text-xs text-[#667085]">未上课次已自动全选</p></div><div className="grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10">{Array.from({ length: 15 }, (_, index) => index + 1).map((lessonId) => { const selected = order.refundableLessons.some((id) => id === lessonId); const completed = lessonId < Math.min(...order.refundableLessons); return <div key={lessonId} className={`relative flex h-14 flex-col items-center justify-center rounded-lg text-sm font-semibold ${selected ? "bg-[#1668d8] text-white" : "bg-[#eaecf0] text-[#98a2b3]"}`}><span className="absolute top-1.5 text-[9px] font-medium opacity-80">{selected ? "退课" : completed ? "已下课" : "已退课"}</span><span className="mt-3">{lessonId}</span>{selected && <Check className="absolute right-1.5 top-1.5" size={12} strokeWidth={3} />}</div>; })}</div></div>
+              <div className="flex flex-col gap-4 rounded-xl border border-[#f8d6bd] bg-[#fff4ec] p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-medium text-[#9a5d27]">本次退款金额</p><p className="mt-1 text-2xl font-semibold text-[#d85b18]">¥ {order.refundAmount.toFixed(2)}</p></div><div className="grid grid-cols-2 gap-3"><div><p className="mb-1.5 text-xs font-medium text-[#9a5d27]">退款方式</p><button type="button" className="flex min-w-[130px] items-center justify-between rounded-lg bg-white px-3 py-2.5 text-sm font-medium ring-1 ring-[#f1d8c7]">原路退回 <ChevronDown size={16} /></button></div><div><p className="mb-1.5 text-xs font-medium text-[#9a5d27]">办理校区</p><button type="button" className="flex min-w-[130px] items-center justify-between rounded-lg bg-white px-3 py-2.5 text-sm font-medium ring-1 ring-[#f1d8c7]">五里墩校区 <ChevronDown size={16} /></button></div></div></div>
+            </div></div>
+          </div>
+        </section>
+        );
+      })}
+      {selectedOrderIds.length === 0 && <p className="text-xs font-medium text-[#d92d20]">请至少选择 1 个订单后再提交</p>}
+    </div>
+  );
+}
+
 function ApprovalTag() {
   return (
     <span className="inline-flex h-6 items-center rounded-full border border-[#cfe0ff] bg-[#eef4ff] px-2.5 text-[11px] font-medium leading-none text-[#165dff]">
@@ -426,6 +470,8 @@ export default function App() {
   const [studentDiscountRuleId, setStudentDiscountRuleId] = useState<number | null>(null);
   const [approvalTab, setApprovalTab] = useState<ApprovalPageTab>("pending");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mergedOrderMode, setMergedOrderMode] = useState(false);
+  const [selectedMergedOrderIds, setSelectedMergedOrderIds] = useState<number[]>([]);
   const [batchRefundOpen, setBatchRefundOpen] = useState(false);
   const [configPanel, setConfigPanel] = useState<ConfigPanel>(null);
   const [detailView, setDetailView] = useState<DetailView>(null);
@@ -705,7 +751,7 @@ export default function App() {
         return 0;
     }
   })();
-  const isConfirmDisabled = (mode === "refund" ? specialRefundAmount : refundAmount) <= 0;
+  const isConfirmDisabled = mergedOrderMode ? selectedMergedOrderIds.length === 0 : (mode === "refund" ? specialRefundAmount : refundAmount) <= 0;
   const getCourseConsumption = (lesson: { id: number; state: LessonState }) => {
     if (lesson.state !== "completed") return 0;
     if (isOriginalPriceRefund) return ORIGINAL_PRICE;
@@ -922,12 +968,16 @@ export default function App() {
     setWithdrawSelectionMode("range");
     setWithdrawSelectedLessonIds([]);
     setCurrentDemoKind("operations");
+    setMergedOrderMode(false);
+    setSelectedMergedOrderIds([]);
     setBankTransferAccountName("");
     setBankTransferAccountNumber("");
     setBankTransferBankName("");
   };
 
   const openWithdrawDemo = (nextScenario: DemoScenario, selectionMode: WithdrawSelectionMode, demoKind: WithdrawDemoKind) => {
+    setMergedOrderMode(false);
+    setSelectedMergedOrderIds([]);
     setScenario(nextScenario);
     setRefundMethod(nextScenario === "standard" ? "现金退款" : "原路退回");
     setCurrentDemoKind(demoKind);
@@ -948,6 +998,16 @@ export default function App() {
     setSpecialDiscount(nextScenario === "discount_original" ? "special_five_original" : "special_five");
     setMode("withdraw");
     setSpecialPanel("form");
+    setDrawerOpen(true);
+  };
+
+  const openMergedOrderDemo = () => {
+    setMergedOrderMode(true);
+    setSelectedMergedOrderIds([]);
+    setCurrentDemoKind("operations");
+    setMode("withdraw");
+    setScenario("standard");
+    setConfirmed(false);
     setDrawerOpen(true);
   };
 
@@ -1102,6 +1162,14 @@ export default function App() {
               </div>
             </div>
             <div className="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 md:grid-cols-3">
+              <button
+                type="button"
+                onClick={openMergedOrderDemo}
+                className="group flex w-full items-center justify-between rounded-[20px] border border-[#bcd1ff] bg-[#f5f8ff] px-4 py-4 text-left text-[15px] font-medium text-[#165dff] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-[#165dff] hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
+              >
+                <span>案例0：合并订单退款</span>
+                <span className="text-lg transition-transform group-hover:translate-x-1">→</span>
+              </button>
               {WITHDRAW_DEMO_CASES.filter((item) => item.kind === "operations").map((item) => (
                 <button
                   key={`operations-${item.scenario}`}
@@ -1255,6 +1323,12 @@ export default function App() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8">
+          {mergedOrderMode ? (
+            <MergedOrderRefundContent
+              selectedOrderIds={selectedMergedOrderIds}
+              onToggleOrder={(orderId) => setSelectedMergedOrderIds((current) => current.includes(orderId) ? current.filter((id) => id !== orderId) : [...current, orderId])}
+            />
+          ) : <>
           <section className="mb-7"><SectionTitle icon={FileText}>订单信息</SectionTitle><div className="rounded-xl border border-[#e7ebf2] bg-white p-4"><div className="flex flex-col gap-4 border-b border-[#edf0f4] pb-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs text-[#98a2b3]">班级名称</p><p className="mt-1 text-sm font-medium leading-6 text-[#344054]">【暑假】一年级信息学算法一期 · 上午小星星柏悦中心</p></div><div className="shrink-0 sm:text-right"><p className="text-xs text-[#98a2b3]">所购课次</p><p className="mt-1 text-sm font-semibold text-[#344054]">1–15</p></div></div><div className={`grid grid-cols-2 gap-x-4 gap-y-3 pt-4 text-sm ${orderInfoGridCols}`}><div><p className="text-xs text-[#98a2b3]">课程总价</p><p className="mt-1 font-semibold">¥ 3,150.00</p></div><div><p className="whitespace-nowrap text-xs text-[#98a2b3]">优惠总金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold text-[#d85b18]">-¥ {formatMoney(totalDiscountAmount)}</p>{hasDiscount && <button onClick={() => setDetailView("discount")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看优惠说明"><CircleHelp size={15} /></button>}</div></div><div><p className="text-xs text-[#98a2b3]">实付金额</p><div className="mt-1 flex items-center gap-1"><p className="font-semibold">¥ {formatMoney(actualPaidAmount)}</p><button onClick={() => setDetailView("paid")} className="rounded-sm text-[#165dff] transition hover:text-[#0e42d2]" aria-label="查看实付金额明细"><CircleHelp size={15} /></button></div></div><div><p className="text-xs text-[#98a2b3]">付款方式</p><p className="mt-1 font-semibold">{paymentMethod}</p></div><div className="min-w-[120px]"><p className="whitespace-nowrap text-xs text-[#98a2b3]">付款时间</p><p className="mt-1 whitespace-nowrap text-sm font-semibold text-[#344054]">2026-07-12 12:00</p></div></div></div></section>
 
               <section><SectionTitle icon={CreditCard}>{mode === "withdraw" ? "退课申请" : "退款申请"}</SectionTitle><div className="rounded-xl bg-[#f8fafc] p-4 sm:p-5">{mode === "withdraw" && <div className="mb-4 space-y-2"><span className="block text-sm font-medium text-[#344054]">退课原因</span><div className="relative"><select value={reason} onChange={(event) => setReason(event.target.value)} className="h-11 w-full appearance-none rounded-lg border border-[#e4e7ec] bg-white px-3 text-sm text-[#344054] outline-none transition focus:border-[#1668d8] focus:ring-4 focus:ring-[#1668d8]/10"><option value="" disabled>请选择退课原因</option><option>时间冲突</option><option>距离冲突</option><option>教师问题</option><option>课程问题</option><option>退费重报</option><option value="业务办理错误">业务办理错误 [不计算三率]</option><option>其他</option></select><ChevronDown className="pointer-events-none absolute right-3 top-3 text-[#667085]" size={17} /></div></div>}<div className="mb-6 space-y-2"><span className="block text-sm font-medium text-[#344054]">退款说明</span><textarea className="min-h-20 w-full resize-none rounded-lg border border-[#e4e7ec] bg-white px-3 py-3 text-sm outline-none transition placeholder:text-[#98a2b3] focus:border-[#1668d8] focus:ring-4 focus:ring-[#1668d8]/10" placeholder="请选择退款说明" /></div>
@@ -1468,6 +1542,7 @@ export default function App() {
                   </div>
                 ) : null}
               </div></section>
+          </>}
             </div>
 
             {!(mode === "refund" && specialPanel === "applications") && (
@@ -1475,7 +1550,7 @@ export default function App() {
                 <div className="flex gap-3">
                   <button onClick={closeDrawer} className="rounded-lg border border-[#cfe0ff] bg-white px-5 py-2.5 text-sm font-semibold text-[#165dff] transition hover:bg-[#eef4ff]">取消</button>
                   <button onClick={submitCurrentRefundApplication} disabled={isConfirmDisabled} className={`inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(22,93,255,0.2)] transition ${isConfirmDisabled ? "cursor-not-allowed bg-[#9ec1ff]" : "bg-[#165dff] hover:bg-[#0e42d2]"}`}>
-                    <span>{confirmButtonText}</span>
+                    <span>{mergedOrderMode ? "提交合并订单退课" : confirmButtonText}</span>
                     {isOperationsBankTransferApproval && <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold leading-4 text-[#165dff]">需财务处理</span>}
                   </button>
                 </div>
