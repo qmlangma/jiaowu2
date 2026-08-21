@@ -225,6 +225,17 @@ const MERGED_ORDER_OPTIONS = [
 ] as const;
 
 function MergedOrderRefundContent({ selectedOrderIds, onToggleOrder }: { selectedOrderIds: number[]; onToggleOrder: (orderId: number) => void }) {
+  const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
+  const selectedOrders = MERGED_ORDER_OPTIONS.filter((order) => selectedOrderIds.includes(order.id));
+  const mergedRefundAmount = selectedOrders.reduce((total, order) => total + order.refundAmount, 0);
+  const detailOrder = MERGED_ORDER_OPTIONS.find((order) => order.id === detailOrderId) ?? selectedOrders[0] ?? MERGED_ORDER_OPTIONS[0];
+  const detailUnitAmount = detailOrder.refundAmount / detailOrder.refundableLessons.length;
+  const detailUnitDiscount = 210 - detailUnitAmount;
+
+  const openRefundDetail = () => {
+    if (selectedOrders.length > 0) setDetailOrderId(selectedOrders[0].id);
+  };
+
   return (
     <div className="space-y-5">
       {MERGED_ORDER_OPTIONS.map((order) => {
@@ -248,17 +259,61 @@ function MergedOrderRefundContent({ selectedOrderIds, onToggleOrder }: { selecte
           </div>
           <div className="space-y-6 p-5">
             <div><SectionTitle icon={FileText}>订单信息</SectionTitle><div className="rounded-xl border border-[#e7ebf2] p-4"><div className="flex flex-col gap-3 border-b border-[#edf0f4] pb-4 sm:flex-row sm:justify-between"><div><p className="text-xs text-[#98a2b3]">班级名称</p><p className="mt-1 text-sm font-medium text-[#344054]">{order.className}</p></div><div className="sm:text-right"><p className="text-xs text-[#98a2b3]">所购课次</p><p className="mt-1 text-sm font-semibold text-[#344054]">1–15</p></div></div><div className="grid grid-cols-2 gap-4 pt-4 text-sm sm:grid-cols-5"><div><p className="text-xs text-[#98a2b3]">课程总价</p><p className="mt-1 font-semibold">¥ 3,150.00</p></div><div><p className="text-xs text-[#98a2b3]">优惠总金额</p><p className="mt-1 font-semibold text-[#d85b18]">-¥ {order.discount.toFixed(2)}</p></div><div><p className="text-xs text-[#98a2b3]">实付金额</p><p className="mt-1 font-semibold">¥ {order.paid.toFixed(2)}</p></div><div><p className="text-xs text-[#98a2b3]">付款方式</p><p className="mt-1 font-semibold">{order.paymentMethod}</p></div><div><p className="text-xs text-[#98a2b3]">付款时间</p><p className="mt-1 whitespace-nowrap font-semibold">{order.paymentTime}</p></div></div></div></div>
-            <div><SectionTitle icon={CreditCard}>退课申请</SectionTitle><div className="space-y-5 rounded-xl bg-[#f8fafc] p-4">
+            {selected && <div><SectionTitle icon={CreditCard}>退课申请</SectionTitle><div className="space-y-5 rounded-xl bg-[#f8fafc] p-4">
               <label className="block space-y-2"><span className="text-sm font-medium text-[#344054]">退课原因</span><div className="relative"><select defaultValue="" className="h-11 w-full appearance-none rounded-lg border border-[#e4e7ec] bg-white px-3 text-sm text-[#344054] outline-none"><option value="" disabled>请选择退课原因</option><option>时间冲突</option><option>距离冲突</option><option>教师问题</option><option>课程问题</option><option>退费重报</option><option>业务办理错误 [不计算三率]</option><option>其他</option></select><ChevronDown className="pointer-events-none absolute right-3 top-3 text-[#667085]" size={17} /></div></label>
               <label className="block space-y-2"><span className="text-sm font-medium text-[#344054]">退款说明</span><textarea className="min-h-20 w-full resize-none rounded-lg border border-[#e4e7ec] bg-white px-3 py-3 text-sm outline-none placeholder:text-[#98a2b3]" placeholder="请输入退款说明" /></label>
               <div><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold text-[#344054]">选择要退的课次</p><p className="text-xs text-[#667085]">未上课次已自动全选</p></div><div className="grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10">{Array.from({ length: 15 }, (_, index) => index + 1).map((lessonId) => { const selected = order.refundableLessons.some((id) => id === lessonId); const completed = lessonId < Math.min(...order.refundableLessons); return <div key={lessonId} className={`relative flex h-14 flex-col items-center justify-center rounded-lg text-sm font-semibold ${selected ? "bg-[#1668d8] text-white" : "bg-[#eaecf0] text-[#98a2b3]"}`}><span className="absolute top-1.5 text-[9px] font-medium opacity-80">{selected ? "退课" : completed ? "已下课" : "已退课"}</span><span className="mt-3">{lessonId}</span>{selected && <Check className="absolute right-1.5 top-1.5" size={12} strokeWidth={3} />}</div>; })}</div></div>
-              <div className="flex flex-col gap-4 rounded-xl border border-[#f8d6bd] bg-[#fff4ec] p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-medium text-[#9a5d27]">本次退款金额</p><p className="mt-1 text-2xl font-semibold text-[#d85b18]">¥ {order.refundAmount.toFixed(2)}</p></div><div className="grid grid-cols-2 gap-3"><div><p className="mb-1.5 text-xs font-medium text-[#9a5d27]">退款方式</p><button type="button" className="flex min-w-[130px] items-center justify-between rounded-lg bg-white px-3 py-2.5 text-sm font-medium ring-1 ring-[#f1d8c7]">原路退回 <ChevronDown size={16} /></button></div><div><p className="mb-1.5 text-xs font-medium text-[#9a5d27]">办理校区</p><button type="button" className="flex min-w-[130px] items-center justify-between rounded-lg bg-white px-3 py-2.5 text-sm font-medium ring-1 ring-[#f1d8c7]">五里墩校区 <ChevronDown size={16} /></button></div></div></div>
-            </div></div>
+            </div></div>}
           </div>
         </section>
         );
       })}
-      {selectedOrderIds.length === 0 && <p className="text-xs font-medium text-[#d92d20]">请至少选择 1 个订单后再提交</p>}
+      <div className="flex flex-col gap-4 rounded-2xl border border-[#f8d6bd] bg-[#fff4ec] p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium text-[#9a5d27]">本次退款金额</p>
+          <div className="mt-1 flex items-center gap-2">
+            <p className="text-2xl font-semibold text-[#d85b18]">¥ {mergedRefundAmount.toFixed(2)}</p>
+            <button type="button" onClick={openRefundDetail} disabled={selectedOrders.length === 0} className="text-[#d85b18] transition hover:text-[#a63f0c] disabled:cursor-not-allowed disabled:opacity-35" aria-label="查看合并退款金额明细"><CircleHelp size={17} /></button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><p className="mb-1.5 text-xs font-medium text-[#9a5d27]">退款方式</p><button type="button" className="flex min-w-[130px] items-center justify-between rounded-lg bg-white px-3 py-2.5 text-sm font-medium ring-1 ring-[#f1d8c7]">原路退回 <ChevronDown size={16} /></button></div>
+          <div><p className="mb-1.5 text-xs font-medium text-[#9a5d27]">办理校区</p><button type="button" className="flex min-w-[130px] items-center justify-between rounded-lg bg-white px-3 py-2.5 text-sm font-medium ring-1 ring-[#f1d8c7]">五里墩校区 <ChevronDown size={16} /></button></div>
+        </div>
+      </div>
+
+      {detailOrderId !== null && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#101828]/55 p-4" onMouseDown={() => setDetailOrderId(null)}>
+          <div className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-[#e4e7ec] px-6 py-5">
+              <h2 className="text-xl font-semibold text-[#1d2939]">本次退款金额明细</h2>
+              <button type="button" onClick={() => setDetailOrderId(null)} className="text-[#667085] hover:text-[#344054]" aria-label="关闭"><X size={24} /></button>
+            </div>
+            <div className="overflow-y-auto p-6">
+              <div className="mb-5 flex items-center gap-3 border-b border-[#e4e7ec]">
+                {MERGED_ORDER_OPTIONS.map((order, index) => {
+                  const enabled = selectedOrderIds.includes(order.id);
+                  const active = detailOrder.id === order.id;
+                  return <div key={order.id} className="flex items-center gap-3"><button type="button" disabled={!enabled} onClick={() => setDetailOrderId(order.id)} className={`border-b-2 px-3 pb-3 text-sm font-semibold transition ${active ? "border-[#165dff] text-[#165dff]" : "border-transparent text-[#667085]"} disabled:cursor-not-allowed disabled:opacity-35`}>订单{order.id}</button>{index === 0 && <span className="pb-3 text-[#d0d5dd]">|</span>}</div>;
+                })}
+              </div>
+              {detailOrder.discount > 0 && <div className="mb-5 space-y-3 rounded-lg border border-[#dbe5ff] bg-[#f5f8ff] p-4 text-sm">
+                <div className="flex gap-3"><span className="w-20 shrink-0 text-[#667085]">优惠名称</span><span className="font-medium text-[#1d2939]">特殊关系5折（按优惠价）</span></div>
+                <div className="flex gap-3"><span className="w-20 shrink-0 text-[#667085]">优惠规则</span><span className="leading-6 text-[#344054]"><strong className="font-semibold text-[#165dff]">按优惠价计费</strong>，优惠金额平均分摊至所有课次，按照课次实际支付价格计算退款金额。</span></div>
+              </div>}
+              <p className="mb-3 text-sm font-semibold text-[#1d2939]">课次明细表</p>
+              <div className="overflow-x-auto rounded-lg border border-[#e5e9f0]">
+                <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+                  <thead className="bg-[#f7f8fa] text-[#667085]"><tr>{["课次", "课次状态", "原价", "优惠总金额", "课耗金额", "已退金额", "剩余可退金额"].map((title) => <th key={title} className="border-b border-[#e5e9f0] bg-[#f7f8fa] px-4 py-3 font-medium"><span className="group relative inline-flex items-center gap-1"><span>{title}</span>{title === "优惠总金额" && <DiscountAmountHeaderHelp />}{title === "已退金额" && <CircleHelp size={15} className="text-[#165dff]" />}{title === "剩余可退金额" && <RemainingRefundableHeaderHelp />}</span></th>)}</tr></thead>
+                  <tbody className="divide-y divide-[#edf0f4] text-[#344054]">{detailOrder.refundableLessons.map((lessonId) => <tr key={lessonId} className="bg-[#FEF8F3]"><td className="px-4 py-3 font-medium">第 {lessonId} 课次</td><td className="px-4 py-3"><span className="inline-flex rounded-full bg-[#edf7f4] px-2 py-0.5 text-xs font-medium text-[#0b806f]">本次退款</span></td><td className="px-4 py-3">¥ 210.00</td><td className="px-4 py-3 text-[#d85b18]">-¥ {detailUnitDiscount.toFixed(2)}</td><td className="px-4 py-3">¥ 0.00</td><td className="px-4 py-3">¥ 0.00</td><td className="px-4 py-3 font-medium text-[#165dff]">¥ {detailUnitAmount.toFixed(2)}</td></tr>)}</tbody>
+                  <tfoot className="bg-[#fafbfc] text-[#1d2939]"><tr className="border-t border-[#e5e9f0] font-semibold"><td className="px-4 py-3">退款合计</td><td className="px-4 py-3">—</td><td className="px-4 py-3">¥ {(detailOrder.refundableLessons.length * 210).toFixed(2)}</td><td className="px-4 py-3 text-[#d85b18]">-¥ {(detailOrder.refundableLessons.length * detailUnitDiscount).toFixed(2)}</td><td className="px-4 py-3">¥ 0.00</td><td className="px-4 py-3">¥ 0.00</td><td className="px-4 py-3 text-[#165dff]">¥ {detailOrder.refundAmount.toFixed(2)}</td></tr></tfoot>
+                </table>
+              </div>
+            </div>
+            <div className="flex justify-end border-t border-[#e4e7ec] px-6 py-4"><button type="button" onClick={() => setDetailOrderId(null)} className="rounded-lg bg-[#165dff] px-5 py-2.5 text-sm font-semibold text-white">我知道了</button></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -782,25 +837,6 @@ export default function App() {
   const specialRefundableLessonCount = specialScenario === "online_rebate" || specialScenario === "high_end_half"
     ? appliedSpecialRefundLessonIds.length
     : specialScenarioLessons.filter((lesson) => getSpecialLessonRemainingRefundAmount(lesson) > 0).length;
-  const specialRefundSummaryText = (() => {
-    switch (specialScenario) {
-      case "online_rebate":
-        return specialRefundableLessonCount ? `可返利 ${specialRefundableLessonCount} 课次，合计 ¥${formatMoney(specialRefundAmount)}` : "";
-      case "high_end_half":
-        return specialRefundableLessonCount ? `高端班可退 ${specialRefundableLessonCount} 课次 ✕ ¥${formatMoney(ORIGINAL_PRICE / 2)}` : "";
-      case "discount_diff":
-        return "";
-      case "single_lesson":
-        return specialSelectedLessonIds.length ? `已选 ${specialSelectedLessonIds.length} 节课，合计可退 ¥${formatMoney(specialRefundAmount)}` : "";
-      case "custom_refund":
-        if (customAllocationMode === "spread") {
-          return specialRefundAmount > 0 ? `退款金额分摊至 ${lessons.length} 个课次` : "";
-        }
-        return specialSelectedLessonIds.length ? `已选 ${specialSelectedLessonIds.length} 节课，分摊退款 ¥${formatMoney(specialRefundAmount)}` : "";
-      default:
-        return "";
-    }
-  })();
   const customRefundFormulaCourseTotal = 3150;
   const customRefundFormulaDiscount = totalDiscountAmount;
   const customRefundFormulaRefunded = 0;
@@ -1486,7 +1522,6 @@ export default function App() {
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <p className="text-2xl font-semibold tracking-[-0.03em] text-[#d85b18]">¥ {(mode === "withdraw" ? refundAmount : specialRefundAmount).toFixed(2)}</p>
                         {!(mode === "refund" && specialScenario === "custom_refund" && customRefundAmountNumber <= 0) ? <button onClick={openCurrentRefundAmountDetail} className="rounded-sm text-[#d85b18] transition hover:text-[#a63f0c]" aria-label="查看本次退款金额明细"><CircleHelp size={16} /></button> : null}
-                        {mode === "refund" && specialRefundSummaryText && <span className="text-sm font-medium text-[#9a5d27]">{specialRefundSummaryText}</span>}
                       </div>
                       {hasSelectedCompletedLesson && <p className="mt-2 text-xs font-medium text-[#c84d3c]">已下课次操作退款后，课次状态将更新为已退课</p>}
                     </div>
